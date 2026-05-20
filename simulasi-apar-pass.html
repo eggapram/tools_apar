@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulasi Interaktif APAR - Metode PASS</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #e74c3c;
+    --green: #2ecc71;
+    --dark: #1a1a2e;
+    --blue: #2980b9;
+    --orange: #d35400;
+    --panel: #f4f4ef;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Sora', sans-serif;
+    background: #f0f0eb;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 20px;
+  }
+  .container {
+    background: #fff; border-radius: 22px; padding: 28px;
+    max-width: 860px; width: 100%;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.13);
+  }
+  h2 { font-size: 20px; font-weight: 800; color: var(--dark); margin-bottom: 4px; }
+  .subtitle { color: #888; font-size: 13px; margin-bottom: 20px; }
+
+  /* PASS steps */
+  .pass-steps { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 20px; }
+  .step-card {
+    background: #f8f8f4; padding: 10px 8px; border-radius: 10px;
+    font-size: 12px; font-weight: 700; color: #bbb;
+    border: 2px solid #e8e8e0; text-align: center; transition: all 0.3s;
+  }
+  .step-card.active    { border-color: var(--red);   color: var(--red);   background: #fff5f5; }
+  .step-card.completed { border-color: var(--green); color: var(--green); background: #f4fbf7; }
+
+  /* Stage */
+  .stage {
+    position: relative; width: 100%; height: 380px;
+    background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 50%, #2c3e50 100%);
+    border-radius: 14px; overflow: hidden; margin-bottom: 20px;
+    box-shadow: inset 0 0 80px rgba(0,0,0,0.6);
+  }
+  .stage::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+    height: 30px; background: #0f1923; border-top: 2px solid #1a2a3a;
+  }
+
+  /* Smoke background particles */
+  .smoke {
+    position: absolute; border-radius: 50%;
+    background: radial-gradient(circle, rgba(80,80,80,0.25) 0%, transparent 70%);
+    animation: smokeRise linear infinite;
+    pointer-events: none;
+  }
+  @keyframes smokeRise {
+    0%   { transform: translateY(0) scale(1); opacity: 0.4; }
+    100% { transform: translateY(-300px) scale(3); opacity: 0; }
+  }
+
+  /* Health bar */
+  .health-bar-container {
+    position: absolute; top: 14px; right: 14px; width: 180px;
+    background: rgba(0,0,0,0.6); padding: 7px 10px;
+    border-radius: 10px; border: 1px solid #444; z-index: 20;
+  }
+  .health-text { color: #fff; font-size: 10px; font-weight: 700; margin-bottom: 4px; letter-spacing: 1px; }
+  .health-bar-bg { width: 100%; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden; }
+  .health-bar { height: 100%; width: 100%; background: var(--red); border-radius: 5px; transition: width 0.15s ease; }
+
+  /* Aim indicator */
+  .aim-indicator {
+    position: absolute; top: 14px; left: 14px;
+    background: rgba(0,0,0,0.55); border: 1px solid #444;
+    border-radius: 8px; padding: 6px 10px;
+    color: rgba(255,255,255,0.55); font-size: 10px; font-weight: 700;
+    z-index: 20; letter-spacing: 0.5px; transition: color 0.3s, border-color 0.3s;
+  }
+  .aim-indicator.on-target { color: var(--green); border-color: var(--green); }
+
+  /* Pin */
+  .pin-element {
+    position: absolute; left: 58px; top: 72px;
+    font-size: 30px; cursor: pointer; z-index: 15;
+    filter: drop-shadow(0 0 10px rgba(255,80,80,1));
+    animation: pinPulse 0.65s infinite alternate;
+    transition: transform 0.5s, opacity 0.5s;
+  }
+  @keyframes pinPulse {
+    0%   { transform: scale(1)   translateY(0);  filter: drop-shadow(0 0 8px  rgba(255,80,80,0.9)); }
+    100% { transform: scale(1.25) translateY(-7px); filter: drop-shadow(0 0 18px rgba(255,140,80,1)); }
+  }
+  .pin-element.pulled { transform: translateY(-220px) rotate(90deg) !important; opacity: 0 !important; animation: none !important; }
+  .pin-label {
+    position: absolute; left: 90px; top: 80px;
+    background: rgba(231,76,60,0.92); color: white;
+    font-size: 10px; font-weight: 700; padding: 3px 8px;
+    border-radius: 20px; z-index: 16; pointer-events: none; transition: opacity 0.4s;
+  }
+
+  /* Firefighter */
+  .firefighter {
+    position: absolute; left: 22px; bottom: 30px;
+    font-size: 96px; z-index: 5; user-select: none; line-height: 1;
+  }
+
+  /* Nozzle */
+  .nozzle-line {
+    position: absolute; left: 112px; bottom: 80px;
+    width: 90px; height: 7px;
+    background: #222; transform-origin: left center;
+    transform: rotate(0deg); border-radius: 4px;
+    z-index: 6; transition: transform 0.12s ease;
+  }
+  .nozzle-tip {
+    position: absolute; right: -6px; top: -3px;
+    width: 13px; height: 13px; background: #555; border-radius: 2px;
+  }
+
+  /* Spray */
+  .foam-spray {
+    position: absolute; left: 88px; top: -10px;
+    width: 300px; height: 26px;
+    background: radial-gradient(ellipse at left, rgba(255,255,255,0.97) 0%, rgba(180,220,255,0.4) 55%, transparent 100%);
+    opacity: 0; transform-origin: left center; pointer-events: none;
+    border-radius: 0 50% 50% 0; transition: opacity 0.08s;
+  }
+  .spraying .foam-spray { opacity: 1; animation: sprayAnim 0.12s infinite alternate; }
+  @keyframes sprayAnim {
+    0%   { transform: scaleY(0.65) scaleX(0.96); }
+    100% { transform: scaleY(1.35) scaleX(1.04); }
+  }
+
+  /* ── FIRE — multi-layer big flames ── */
+  .fire-container {
+    position: absolute; right: 55px; bottom: 30px;
+    width: 180px; height: 220px;
+    display: flex; justify-content: center; align-items: flex-end;
+    z-index: 4; pointer-events: none;
+  }
+
+  /* Base glow on ground */
+  .fire-glow {
+    position: absolute; bottom: -10px; left: 50%;
+    transform: translateX(-50%);
+    width: 200px; height: 60px;
+    background: radial-gradient(ellipse, rgba(255,100,0,0.55) 0%, transparent 70%);
+    border-radius: 50%; animation: glowPulse 0.4s infinite alternate;
+  }
+  @keyframes glowPulse {
+    0%  { transform: translateX(-50%) scaleX(1);    opacity: 0.7; }
+    100%{ transform: translateX(-50%) scaleX(1.15); opacity: 1; }
+  }
+
+  /* Individual flame layers */
+  .flame {
+    position: absolute; bottom: 0;
+    font-size: 110px; line-height: 1;
+    transform-origin: bottom center;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+  }
+  .flame-c  { left: 50%; transform: translateX(-50%); font-size: 130px; animation: flameC  0.18s infinite alternate; z-index: 3; }
+  .flame-l  { left: 0;   font-size: 105px; animation: flameL  0.22s infinite alternate; z-index: 2; opacity: 0.9; }
+  .flame-r  { right: 0;  font-size: 100px; animation: flameR  0.20s infinite alternate; z-index: 2; opacity: 0.85; }
+  .flame-bl { left: 14px; font-size: 82px; animation: flameBL 0.26s infinite alternate; z-index: 1; opacity: 0.75; }
+  .flame-br { right: 14px;font-size: 78px; animation: flameBR 0.24s infinite alternate; z-index: 1; opacity: 0.75; }
+  .flame-t  { left: 50%; transform: translateX(-50%); font-size: 72px; bottom: 80px; animation: flameT 0.30s infinite alternate; z-index: 4; opacity: 0.65; }
+
+  @keyframes flameC  { 0%{transform:translateX(-50%) scale(1)    skewX(-4deg); filter:drop-shadow(0 0 24px #ff4500);} 100%{transform:translateX(-50%) scale(1.12) skewX(4deg);  filter:drop-shadow(0 0 48px #ff6000);} }
+  @keyframes flameL  { 0%{transform:scale(1)    skewX(-6deg) rotate(-3deg); filter:drop-shadow(0 0 18px #e74c3c);} 100%{transform:scale(1.1)  skewX(3deg)  rotate(2deg);  filter:drop-shadow(0 0 30px #ff6000);} }
+  @keyframes flameR  { 0%{transform:scale(1.05) skewX(5deg)  rotate(3deg);  filter:drop-shadow(0 0 16px #e74c3c);} 100%{transform:scale(0.95) skewX(-4deg) rotate(-2deg); filter:drop-shadow(0 0 28px #ff4500);} }
+  @keyframes flameBL { 0%{transform:scale(1)    skewX(-8deg) rotate(-5deg); filter:drop-shadow(0 0 12px #c0392b);} 100%{transform:scale(1.08) skewX(4deg)  rotate(3deg);  filter:drop-shadow(0 0 22px #e74c3c);} }
+  @keyframes flameBR { 0%{transform:scale(1.04) skewX(7deg)  rotate(4deg);  filter:drop-shadow(0 0 14px #c0392b);} 100%{transform:scale(0.96) skewX(-5deg) rotate(-3deg); filter:drop-shadow(0 0 20px #e74c3c);} }
+  @keyframes flameT  { 0%{transform:translateX(-50%) scale(0.9) skewX(-10deg); opacity:0.5;} 100%{transform:translateX(-50%) scale(1.15) skewX(8deg); opacity:0.8;} }
+
+  /* Info box */
+  .info-box {
+    font-size: 14px; font-weight: 600; color: var(--dark);
+    text-align: center; min-height: 22px; margin-bottom: 16px;
+    padding: 11px 16px; background: var(--panel);
+    border-radius: 10px; transition: color 0.3s;
+  }
+
+  /* Control panel */
+  .control-panel {
+    background: var(--panel); padding: 18px 20px; border-radius: 14px;
+    display: flex; justify-content: space-around; align-items: center;
+    flex-wrap: wrap; gap: 14px;
+  }
+  .aim-label { font-size: 11px; font-weight: 700; color: #888; text-align: center; margin-bottom: 8px; letter-spacing: 1px; }
+
+  .dpad { display: grid; grid-template-columns: repeat(3,44px); grid-template-rows: repeat(3,44px); gap: 4px; }
+  .dpad-btn {
+    background: #2c3e50; color: white; border: none;
+    border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: 700;
+    transition: background 0.12s, transform 0.1s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .dpad-btn:hover  { background: #34495e; }
+  .dpad-btn:active { transform: scale(0.92); }
+  .dpad-empty { background: transparent !important; cursor: default; }
+
+  /* Squeeze section */
+  .squeeze-wrap { text-align: center; }
+
+  /* Toggle squeeze button */
+  .btn-trigger {
+    background: var(--red); color: white; border: none;
+    padding: 15px 36px; font-size: 15px;
+    font-family: 'Sora', sans-serif; font-weight: 800;
+    border-radius: 50px; cursor: not-allowed; opacity: 0.4;
+    box-shadow: 0 6px 20px rgba(231,76,60,0.25);
+    user-select: none; transition: opacity 0.3s, background 0.3s, transform 0.1s;
+    letter-spacing: 0.5px; display: block; width: 100%;
+  }
+  .btn-trigger.ready        { cursor: pointer; opacity: 1; }
+  .btn-trigger.ready:hover  { background: #c0392b; }
+  .btn-trigger.ready:active { transform: scale(0.96); }
+  .btn-trigger.on           { background: #e67e22; opacity: 1; cursor: pointer; animation: trgPulse 0.5s infinite alternate; }
+  @keyframes trgPulse { 0%{box-shadow:0 6px 20px rgba(230,126,34,0.4);} 100%{box-shadow:0 6px 30px rgba(230,126,34,0.8);} }
+  .btn-trigger.extinguished { background: var(--green); opacity: 1; cursor: default; animation: none; }
+
+  .squeeze-hint { font-size: 10px; color: #999; margin-top: 7px; font-weight: 600; }
+
+  /* Sweep buttons — highlighted when squeeze is ON */
+  .dpad-sweep { transition: background 0.2s, box-shadow 0.2s; }
+  .sweep-active .dpad-sweep { background: #e67e22 !important; box-shadow: 0 0 0 3px rgba(230,126,34,0.4); }
+
+  @media (max-width: 540px) {
+    .pass-steps { grid-template-columns: repeat(2,1fr); }
+    .stage { height: 300px; }
+    .firefighter { font-size: 70px; left: 10px; }
+    .flame-c { font-size: 96px; }
+    .flame-l, .flame-r { font-size: 78px; }
+    .fire-container { right: 20px; width: 140px; }
+    .btn-trigger { padding: 12px 20px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h2>🧯 Simulasi APAR — Metode P.A.S.S</h2>
+  <p class="subtitle">Pelajari cara menggunakan APAR yang benar melalui simulasi interaktif ini.</p>
+
+  <div class="pass-steps">
+    <div class="step-card active" id="stepP" >1. PULL — Cabut Pin</div>
+    <div class="step-card"        id="stepA" >2. AIM — Arahkan</div>
+    <div class="step-card"        id="stepS1">3. SQUEEZE — Tekan</div>
+    <div class="step-card"        id="stepS2">4. SWEEP — Sapu</div>
+  </div>
+
+  <div class="stage" id="stage">
+    <!-- Smoke particles injected by JS -->
+
+    <div class="aim-indicator" id="aimIndicator">SUDUT: 0°</div>
+
+    <div class="health-bar-container">
+      <div class="health-text">VOLUME API</div>
+      <div class="health-bar-bg"><div class="health-bar" id="fireHealth"></div></div>
+    </div>
+
+    <div class="pin-element" id="firePin" title="Klik untuk cabut pin!">📍</div>
+    <div class="pin-label"   id="pinLabel">CABUT!</div>
+
+    <div class="firefighter">🧑‍🚒</div>
+
+    <div class="nozzle-line" id="nozzle">
+      <div class="nozzle-tip"></div>
+      <div class="foam-spray"></div>
+    </div>
+
+    <!-- Multi-layer fire -->
+    <div class="fire-container" id="fireContainer">
+      <div class="fire-glow"  id="fireGlow"></div>
+      <div class="flame flame-bl" id="flameBL">🔥</div>
+      <div class="flame flame-br" id="flameBR">🔥</div>
+      <div class="flame flame-l"  id="flameL" >🔥</div>
+      <div class="flame flame-r"  id="flameR" >🔥</div>
+      <div class="flame flame-c"  id="flameC" >🔥</div>
+      <div class="flame flame-t"  id="flameT" >🔥</div>
+    </div>
+  </div>
+
+  <div class="info-box" id="infoBox">
+    Langkah 1: Klik PIN MERAH (📍) pada layar untuk mencabut pengaman APAR!
+  </div>
+
+  <div class="control-panel" id="controlPanel">
+    <div>
+      <div class="aim-label">ARAHKAN NOZEL (AIM)</div>
+      <div class="dpad" id="dpad">
+        <div class="dpad-btn dpad-empty"></div>
+        <button class="dpad-btn" id="aimUp">▲</button>
+        <div class="dpad-btn dpad-empty"></div>
+
+        <button class="dpad-btn dpad-sweep" id="aimLeft">◀</button>
+        <div class="dpad-btn dpad-empty" style="font-size:12px;color:#aaa;">✛</div>
+        <button class="dpad-btn dpad-sweep" id="aimRight">▶</button>
+
+        <div class="dpad-btn dpad-empty"></div>
+        <button class="dpad-btn" id="aimDown">▼</button>
+        <div class="dpad-btn dpad-empty"></div>
+      </div>
+    </div>
+
+    <div class="squeeze-wrap">
+      <!-- Toggle button: click once = ON, click again = OFF -->
+      <button class="btn-trigger" id="squeezeBtn" disabled>TEKAN TUAS (SQUEEZE)</button>
+      <div class="squeeze-hint" id="squeezeHint">Klik sekali untuk ON, klik lagi untuk OFF<br>Lalu sapu ◀ / ▶ bergantian saat menyemprot</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── State ──
+  let isPinPulled  = false;
+  let isAimed      = false;
+  let isSpraying   = false;   // toggle state
+  let currentAngle = 0;
+  let fireHealth   = 100;
+  let lastSweepDir = null;
+
+  // ── DOM ──
+  const firePin       = document.getElementById('firePin');
+  const pinLabel      = document.getElementById('pinLabel');
+  const nozzle        = document.getElementById('nozzle');
+  const squeezeBtn    = document.getElementById('squeezeBtn');
+  const squeezeHint   = document.getElementById('squeezeHint');
+  const fireHealth_el = document.getElementById('fireHealth');
+  const infoBox       = document.getElementById('infoBox');
+  const aimIndicator  = document.getElementById('aimIndicator');
+  const dpad          = document.getElementById('dpad');
+  const stage         = document.getElementById('stage');
+  const fireGlow      = document.getElementById('fireGlow');
+
+  const flames = ['flameC','flameL','flameR','flameBL','flameBR','flameT']
+                  .map(id => document.getElementById(id));
+
+  const stepP  = document.getElementById('stepP');
+  const stepA  = document.getElementById('stepA');
+  const stepS1 = document.getElementById('stepS1');
+  const stepS2 = document.getElementById('stepS2');
+
+  // ── Smoke particles ──
+  function spawnSmoke() {
+    const s = document.createElement('div');
+    s.className = 'smoke';
+    const size = 60 + Math.random() * 80;
+    s.style.cssText = `
+      width:${size}px; height:${size}px;
+      right:${60 + Math.random()*80}px;
+      bottom:${80 + Math.random()*40}px;
+      animation-duration:${2.5 + Math.random()*2}s;
+      animation-delay:${Math.random()}s;
+    `;
+    stage.appendChild(s);
+    setTimeout(() => s.remove(), 5000);
+  }
+  setInterval(spawnSmoke, 800);
+
+  // ── Helper ──
+  function setInfo(text, color) {
+    infoBox.textContent = text;
+    infoBox.style.color = color || '#1a1a2e';
+  }
+
+  // ── STEP 1: PULL ──
+  firePin.addEventListener('click', () => {
+    if (isPinPulled) return;
+    isPinPulled = true;
+    firePin.classList.add('pulled');
+    pinLabel.style.opacity = '0';
+    stepP.className = 'step-card completed';
+    stepA.className = 'step-card active';
+    setInfo('Langkah 2: Gunakan ▲ ▼ untuk mengarahkan selang ke dasar api!', '#2980b9');
+  });
+
+  // ── STEP 2: AIM ──
+  function updateNozzle() {
+    currentAngle = Math.max(-30, Math.min(45, currentAngle));
+    nozzle.style.transform = `rotate(${currentAngle}deg)`;
+    aimIndicator.textContent = `SUDUT: ${currentAngle}°`;
+
+    if (!isPinPulled) return;
+    const onTarget = currentAngle >= 8 && currentAngle <= 22;
+    aimIndicator.classList.toggle('on-target', onTarget);
+
+    if (onTarget && !isAimed) {
+      isAimed = true;
+      stepA.className  = 'step-card completed';
+      stepS1.className = 'step-card active';
+      squeezeBtn.removeAttribute('disabled');
+      squeezeBtn.classList.add('ready');
+      setInfo('Langkah 3: Tepat sasaran! Klik TOMBOL MERAH untuk mulai menyemprot!', '#c0392b');
+    }
+  }
+
+  document.getElementById('aimUp').addEventListener('click',   () => { currentAngle -= 5; updateNozzle(); });
+  document.getElementById('aimDown').addEventListener('click',  () => { currentAngle += 5; updateNozzle(); });
+
+  // ── STEP 3: SQUEEZE — toggle ON/OFF ──
+  squeezeBtn.addEventListener('click', () => {
+    if (!isAimed || fireHealth <= 0) return;
+
+    isSpraying = !isSpraying;
+
+    if (isSpraying) {
+      // Turn ON
+      nozzle.classList.add('spraying');
+      squeezeBtn.classList.remove('ready');
+      squeezeBtn.classList.add('on');
+      squeezeBtn.textContent = '🔴 SEDANG MENYEMPROT — Klik Stop';
+      dpad.classList.add('sweep-active');
+
+      if (stepS1.className !== 'step-card completed') {
+        stepS1.className = 'step-card completed';
+        stepS2.className = 'step-card active';
+      }
+      setInfo('Langkah 4: Selang aktif! Tekan ◀ / ▶ bergantian untuk menyapu api!', '#d35400');
+    } else {
+      // Turn OFF
+      stopSpraying();
+      setInfo('Tuas dilepas. Klik TEKAN TUAS lagi untuk menyemprot kembali.', '#888');
+    }
+  });
+
+  function stopSpraying() {
+    isSpraying = false;
+    nozzle.classList.remove('spraying');
+    squeezeBtn.classList.remove('on');
+    squeezeBtn.classList.add('ready');
+    squeezeBtn.textContent = 'TEKAN TUAS (SQUEEZE)';
+    dpad.classList.remove('sweep-active');
+  }
+
+  // ── STEP 4: SWEEP ──
+  function handleSweep(direction) {
+    if (!isSpraying || fireHealth <= 0) return;
+
+    if (lastSweepDir && lastSweepDir !== direction) {
+      fireHealth -= 14;
+      if (fireHealth < 0) fireHealth = 0;
+
+      fireHealth_el.style.width = fireHealth + '%';
+
+      // Scale down all flames proportionally
+      const scale = Math.max(0.04, fireHealth / 100);
+      flames.forEach(f => {
+        f.style.transform = f.id === 'flameC'
+          ? `translateX(-50%) scale(${scale})`
+          : `scale(${scale})`;
+        f.style.opacity = String(scale * 1.1);
+      });
+      fireGlow.style.opacity = String(scale * 0.9);
+
+      if (fireHealth <= 0) {
+        flames.forEach(f => f.style.opacity = '0');
+        fireGlow.style.opacity = '0';
+        stepS2.className = 'step-card completed';
+        setInfo('🎉 Selamat! Api berhasil dipadamkan dengan metode P.A.S.S yang benar!', '#2ecc71');
+        squeezeBtn.textContent = '✓ API PADAM!';
+        squeezeBtn.classList.remove('on', 'ready');
+        squeezeBtn.classList.add('extinguished');
+        squeezeBtn.disabled = true;
+        nozzle.classList.remove('spraying');
+        dpad.classList.remove('sweep-active');
+        isSpraying = false;
+      }
+    }
+    lastSweepDir = direction;
+  }
+
+  document.getElementById('aimLeft').addEventListener('click',  () => handleSweep('left'));
+  document.getElementById('aimRight').addEventListener('click', () => handleSweep('right'));
+</script>
+</body>
+</html>
