@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HSE Hazard Finder — Toga Safety</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --yellow: #F5C518;
+  --yellow-dark: #D4A800;
+  --red: #D72638;
+  --red-dark: #A81C29;
+  --green: #27AE60;
+  --dark: #0F1923;
+  --dark2: #1A2535;
+  --panel: #1E2D3D;
+  --steel: #2C3E50;
+  --ink: #ECF0F1;
+  --muted: #7F8C8D;
+  --orange: #E67E22;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Sora', sans-serif;
+  background: var(--dark);
+  color: var(--ink);
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 0 0 40px;
+  overflow-x: hidden;
+}
+
+/* ── Header ── */
+.site-header {
+  width: 100%; background: var(--dark2);
+  border-bottom: 3px solid var(--yellow);
+  padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+.logo { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; color: var(--yellow); }
+.logo span { color: var(--ink); }
+.header-badge {
+  background: var(--red); color: white;
+  font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 4px 12px; border-radius: 20px;
+}
+
+/* ── Intro screen ── */
+.intro-screen {
+  max-width: 680px; width: 100%; margin: 40px auto; padding: 0 20px;
+  text-align: center;
+}
+.intro-icon { font-size: 64px; margin-bottom: 16px; filter: drop-shadow(0 0 20px rgba(245,197,24,0.5)); }
+.intro-screen h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 48px; letter-spacing: 3px; color: var(--yellow);
+  line-height: 1; margin-bottom: 8px;
+}
+.intro-screen p { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 28px; }
+.scene-selector { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 28px; }
+.scene-card {
+  background: var(--panel); border: 2px solid var(--steel);
+  border-radius: 14px; padding: 20px 12px; cursor: pointer;
+  transition: all 0.2s; text-align: center;
+}
+.scene-card:hover { border-color: var(--yellow); transform: translateY(-3px); }
+.scene-card.selected { border-color: var(--yellow); background: rgba(245,197,24,0.08); }
+.scene-card .sc-icon { font-size: 36px; margin-bottom: 8px; display: block; }
+.scene-card .sc-name { font-size: 13px; font-weight: 700; color: var(--ink); display: block; }
+.scene-card .sc-desc { font-size: 10.5px; color: var(--muted); margin-top: 3px; display: block; }
+.scene-card .sc-count { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--yellow); margin-top: 6px; display: block; }
+
+.btn-start {
+  background: var(--yellow); color: var(--dark);
+  border: none; padding: 16px 48px; font-size: 16px; font-weight: 800;
+  font-family: 'Sora', sans-serif; border-radius: 50px; cursor: pointer;
+  transition: all 0.2s; letter-spacing: 0.5px;
+  box-shadow: 0 8px 24px rgba(245,197,24,0.3);
+}
+.btn-start:hover { background: var(--yellow-dark); transform: translateY(-2px); }
+.btn-start:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+/* ── Game screen ── */
+.game-screen { width: 100%; max-width: 900px; padding: 0 16px; display: none; }
+
+.hud {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 0; gap: 12px; flex-wrap: wrap;
+}
+.hud-item { display: flex; flex-direction: column; align-items: center; }
+.hud-label { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+.hud-val { font-family: 'Space Mono', monospace; font-size: 22px; font-weight: 700; color: var(--yellow); }
+.hud-val.danger { color: var(--red); animation: blink 0.5s infinite alternate; }
+@keyframes blink { 0%{opacity:1;} 100%{opacity:0.4;} }
+
+/* Progress dots */
+.hazard-dots { display: flex; gap: 8px; align-items: center; }
+.h-dot {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid var(--steel); background: transparent;
+  transition: all 0.3s;
+}
+.h-dot.found { background: var(--green); border-color: var(--green); box-shadow: 0 0 8px rgba(39,174,96,0.6); }
+
+/* Scene container */
+.scene-wrap {
+  position: relative; width: 100%;
+  border-radius: 16px; overflow: hidden;
+  border: 2px solid var(--steel);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  cursor: crosshair;
+  background: #2a3a4a;
+}
+.scene-wrap svg { display: block; width: 100%; height: auto; }
+
+/* Hotspot rings */
+.hotspot {
+  position: absolute; cursor: pointer;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
+.hotspot-ring {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 3px solid var(--red);
+  background: rgba(215,38,56,0.15);
+  animation: ringPulse 1.2s infinite;
+  transition: all 0.2s;
+  position: relative;
+}
+.hotspot:hover .hotspot-ring { background: rgba(215,38,56,0.35); transform: scale(1.1); }
+.hotspot.found .hotspot-ring {
+  border-color: var(--green);
+  background: rgba(39,174,96,0.25);
+  animation: none;
+}
+@keyframes ringPulse {
+  0%  { box-shadow: 0 0 0 0    rgba(215,38,56,0.7), 0 0 0 0    rgba(215,38,56,0.3); }
+  70% { box-shadow: 0 0 0 10px rgba(215,38,56,0),   0 0 0 20px rgba(215,38,56,0); }
+  100%{ box-shadow: 0 0 0 0    rgba(215,38,56,0),   0 0 0 0    rgba(215,38,56,0); }
+}
+.hotspot-ring::after {
+  content: '!';
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  font-size: 16px; font-weight: 900; color: var(--red);
+}
+.hotspot.found .hotspot-ring::after { content: '✓'; color: var(--green); }
+
+/* Hint ripple on wrong click */
+.wrong-click {
+  position: absolute; width: 50px; height: 50px;
+  border-radius: 50%; border: 3px solid var(--orange);
+  transform: translate(-50%,-50%) scale(0);
+  animation: wrongRipple 0.7s forwards;
+  pointer-events: none; z-index: 20;
+}
+@keyframes wrongRipple {
+  0%  { transform: translate(-50%,-50%) scale(0); opacity: 1; }
+  100%{ transform: translate(-50%,-50%) scale(2.5); opacity: 0; }
+}
+
+/* ── Popup ── */
+.popup-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 200; display: none;
+  align-items: center; justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+}
+.popup-overlay.show { display: flex; }
+.popup {
+  background: var(--dark2); border-radius: 20px;
+  max-width: 420px; width: 100%;
+  border: 2px solid var(--red);
+  box-shadow: 0 0 60px rgba(215,38,56,0.3);
+  overflow: hidden;
+  animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes popIn {
+  0%  { transform: scale(0.7); opacity: 0; }
+  100%{ transform: scale(1);   opacity: 1; }
+}
+.popup-header {
+  background: var(--red); padding: 16px 20px;
+  display: flex; align-items: center; gap: 12px;
+}
+.popup-icon { font-size: 32px; }
+.popup-header-text .popup-tag {
+  font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  color: rgba(255,255,255,0.7); display: block; margin-bottom: 2px;
+}
+.popup-header-text .popup-title { font-size: 17px; font-weight: 800; color: white; display: block; }
+.popup-body { padding: 20px; }
+.popup-danger {
+  background: rgba(215,38,56,0.1); border-left: 3px solid var(--red);
+  border-radius: 8px; padding: 12px 14px; margin-bottom: 14px;
+}
+.popup-danger .pd-label { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--red); margin-bottom: 5px; }
+.popup-danger p { font-size: 13px; color: var(--ink); line-height: 1.55; }
+.popup-solution {
+  background: rgba(39,174,96,0.1); border-left: 3px solid var(--green);
+  border-radius: 8px; padding: 12px 14px; margin-bottom: 18px;
+}
+.popup-solution .ps-label { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--green); margin-bottom: 5px; }
+.popup-solution p { font-size: 13px; color: var(--ink); line-height: 1.55; }
+.popup-solution strong { color: var(--yellow); }
+.btn-buy {
+  display: block; width: 100%; padding: 14px;
+  background: var(--yellow); color: var(--dark);
+  border: none; border-radius: 50px; font-size: 14px; font-weight: 800;
+  font-family: 'Sora', sans-serif; cursor: pointer; text-align: center;
+  text-decoration: none; letter-spacing: 0.5px;
+  transition: all 0.18s; margin-bottom: 10px;
+}
+.btn-buy:hover { background: var(--yellow-dark); }
+.btn-continue {
+  display: block; width: 100%; padding: 11px;
+  background: transparent; border: 2px solid var(--steel);
+  color: var(--muted); border-radius: 50px; font-size: 13px; font-weight: 600;
+  font-family: 'Sora', sans-serif; cursor: pointer; transition: all 0.15s;
+}
+.btn-continue:hover { border-color: var(--ink); color: var(--ink); }
+
+/* ── End screen ── */
+.end-screen {
+  max-width: 680px; width: 100%; margin: 40px auto; padding: 0 20px;
+  text-align: center; display: none;
+}
+.end-icon { font-size: 72px; margin-bottom: 16px; }
+.end-screen h2 { font-family: 'Bebas Neue', sans-serif; font-size: 42px; letter-spacing: 3px; margin-bottom: 8px; }
+.end-screen.win h2 { color: var(--green); }
+.end-screen.lose h2 { color: var(--red); }
+.end-stats {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 12px;
+  margin: 20px 0 28px;
+}
+.stat-box {
+  background: var(--panel); border-radius: 12px; padding: 16px 10px;
+  border: 1px solid var(--steel);
+}
+.stat-num { font-family: 'Space Mono', monospace; font-size: 28px; font-weight: 700; color: var(--yellow); display: block; }
+.stat-label { font-size: 10px; color: var(--muted); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; display: block; }
+.end-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.btn-replay {
+  background: var(--yellow); color: var(--dark);
+  border: none; padding: 14px 32px; font-size: 14px; font-weight: 800;
+  font-family: 'Sora', sans-serif; border-radius: 50px; cursor: pointer; transition: all 0.2s;
+}
+.btn-replay:hover { background: var(--yellow-dark); }
+.btn-menu {
+  background: transparent; border: 2px solid var(--steel); color: var(--muted);
+  padding: 14px 32px; font-size: 14px; font-weight: 600;
+  font-family: 'Sora', sans-serif; border-radius: 50px; cursor: pointer; transition: all 0.2s;
+}
+.btn-menu:hover { border-color: var(--ink); color: var(--ink); }
+
+/* ── Instructions strip ── */
+.instructions {
+  display: flex; gap: 20px; align-items: center;
+  background: var(--panel); border-radius: 10px; padding: 10px 16px;
+  margin-bottom: 14px; font-size: 12px; color: var(--muted); flex-wrap: wrap;
+}
+.instructions span { display: flex; align-items: center; gap: 6px; }
+
+@media (max-width: 500px) {
+  .intro-screen h1 { font-size: 36px; }
+  .scene-selector { grid-template-columns: 1fr; }
+  .end-stats { grid-template-columns: repeat(3,1fr); }
+  .hud-val { font-size: 18px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="site-header">
+  <div class="logo">TOGA <span>SAFETY</span></div>
+  <div class="header-badge">🎮 HSE Hazard Finder</div>
+</div>
+
+<!-- ═══════════════════════════════ INTRO ═══════════════════════════════ -->
+<div class="intro-screen" id="introScreen">
+  <div class="intro-icon">🔍</div>
+  <h1>HSE HAZARD FINDER</h1>
+  <p>Temukan semua bahaya tersembunyi di lokasi kerja sebelum waktu habis!<br>Klik setiap kondisi berbahaya untuk mengidentifikasinya.</p>
+
+  <div class="scene-selector">
+    <div class="scene-card" data-scene="0" onclick="selectScene(0, this)">
+      <span class="sc-icon">🏗️</span>
+      <span class="sc-name">Area Konstruksi</span>
+      <span class="sc-desc">Proyek gedung & scaffolding</span>
+      <span class="sc-count">6 bahaya tersembunyi</span>
+    </div>
+    <div class="scene-card" data-scene="1" onclick="selectScene(1, this)">
+      <span class="sc-icon">🏭</span>
+      <span class="sc-name">Area Pabrik</span>
+      <span class="sc-desc">Lantai produksi & mesin</span>
+      <span class="sc-count">6 bahaya tersembunyi</span>
+    </div>
+    <div class="scene-card" data-scene="2" onclick="selectScene(2, this)">
+      <span class="sc-icon">🏢</span>
+      <span class="sc-name">Area Kantor</span>
+      <span class="sc-desc">Ruang kerja & koridor</span>
+      <span class="sc-count">5 bahaya tersembunyi</span>
+    </div>
+  </div>
+
+  <button class="btn-start" id="btnStart" onclick="startGame()" disabled>
+    Pilih Lokasi Dulu ↑
+  </button>
+</div>
+
+<!-- ═══════════════════════════════ GAME ═══════════════════════════════ -->
+<div class="game-screen" id="gameScreen">
+  <div class="hud">
+    <div class="hud-item">
+      <div class="hud-label">Lokasi</div>
+      <div class="hud-val" id="hudScene" style="font-size:14px;font-family:'Sora',sans-serif;font-weight:700;">—</div>
+    </div>
+    <div class="hud-item">
+      <div class="hud-label">Bahaya Ditemukan</div>
+      <div class="hazard-dots" id="hazardDots"></div>
+    </div>
+    <div class="hud-item">
+      <div class="hud-label">Waktu</div>
+      <div class="hud-val" id="hudTimer">90</div>
+    </div>
+    <div class="hud-item">
+      <div class="hud-label">Skor</div>
+      <div class="hud-val" id="hudScore">0</div>
+    </div>
+  </div>
+
+  <div class="instructions">
+    <span>🔴 Klik titik merah = bahaya!</span>
+    <span>⏱ Waktu terus berjalan</span>
+    <span>💥 Klik area kosong = -5 skor</span>
+  </div>
+
+  <div class="scene-wrap" id="sceneWrap" onclick="handleSceneClick(event)">
+    <!-- SVG injected by JS -->
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ END ═══════════════════════════════ -->
+<div class="end-screen" id="endScreen">
+  <div class="end-icon" id="endIcon">🏆</div>
+  <h2 id="endTitle">SEMUA BAHAYA DITEMUKAN!</h2>
+  <p id="endDesc" style="color:var(--muted);font-size:14px;margin-bottom:4px;"></p>
+  <div class="end-stats">
+    <div class="stat-box"><span class="stat-num" id="statFound">0</span><span class="stat-label">Bahaya Temukan</span></div>
+    <div class="stat-box"><span class="stat-num" id="statScore">0</span><span class="stat-label">Skor Akhir</span></div>
+    <div class="stat-box"><span class="stat-num" id="statTime">0</span><span class="stat-label">Detik Sisa</span></div>
+  </div>
+  <div class="end-btns">
+    <button class="btn-replay" onclick="replayGame()">🔄 Main Lagi</button>
+    <button class="btn-menu"   onclick="goMenu()">← Menu Utama</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ POPUP ═══════════════════════════════ -->
+<div class="popup-overlay" id="popupOverlay">
+  <div class="popup">
+    <div class="popup-header">
+      <div class="popup-icon" id="popIcon">⚠️</div>
+      <div class="popup-header-text">
+        <span class="popup-tag">Bahaya Teridentifikasi!</span>
+        <span class="popup-title" id="popTitle">—</span>
+      </div>
+    </div>
+    <div class="popup-body">
+      <div class="popup-danger">
+        <div class="pd-label">⚠ Risiko Bahaya</div>
+        <p id="popDanger">—</p>
+      </div>
+      <div class="popup-solution">
+        <div class="ps-label">✅ Solusi K3</div>
+        <p id="popSolution">—</p>
+      </div>
+      <a class="btn-buy" id="popBuyBtn" href="#" target="_blank">🛒 Beli Sekarang di Toga Safety</a>
+      <button class="btn-continue" onclick="closePopup()">Lanjutkan Pencarian →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// DATA SCENES
+// ══════════════════════════════════════════════════════
+const WA = 'https://wa.me/6281196967064';
+
+const SCENES = [
+  // ─── 0: KONSTRUKSI ───
+  {
+    name: '🏗️ Area Konstruksi',
+    time: 90,
+    bgColor: '#3a4a3a',
+    svgContent: `
+      <!-- Sky -->
+      <rect width="900" height="500" fill="#87CEEB"/>
+      <rect y="320" width="900" height="180" fill="#8B7355"/>
+      <!-- Ground texture -->
+      <rect y="390" width="900" height="110" fill="#6B5A3E"/>
+      <!-- Clouds -->
+      <ellipse cx="150" cy="60" rx="60" ry="25" fill="white" opacity="0.8"/>
+      <ellipse cx="190" cy="55" rx="40" ry="20" fill="white" opacity="0.8"/>
+      <ellipse cx="700" cy="80" rx="50" ry="20" fill="white" opacity="0.7"/>
+
+      <!-- Building structure -->
+      <rect x="180" y="80" width="280" height="320" fill="#B0B0B0" stroke="#999" stroke-width="2"/>
+      <!-- Floors -->
+      <line x1="180" y1="160" x2="460" y2="160" stroke="#999" stroke-width="3"/>
+      <line x1="180" y1="240" x2="460" y2="240" stroke="#999" stroke-width="3"/>
+      <line x1="180" y1="320" x2="460" y2="320" stroke="#999" stroke-width="3"/>
+      <!-- Windows -->
+      <rect x="210" y="100" width="40" height="40" fill="#5B9BD5" stroke="#888" stroke-width="1"/>
+      <rect x="280" y="100" width="40" height="40" fill="#5B9BD5" stroke="#888" stroke-width="1"/>
+      <rect x="350" y="100" width="40" height="40" fill="#5B9BD5" stroke="#888" stroke-width="1"/>
+      <rect x="210" y="180" width="40" height="40" fill="#5B9BD5" stroke="#888" stroke-width="1"/>
+      <rect x="280" y="180" width="40" height="40" fill="#5B9BD5" stroke="#888" stroke-width="1"/>
+      <rect x="350" y="180" width="40" height="40" fill="#5B9BD5" stroke="#888" stroke-width="1"/>
+      <!-- Top floor open construction -->
+      <rect x="180" y="80" width="280" height="80" fill="#C8C8C8" opacity="0.5"/>
+
+      <!-- Scaffolding -->
+      <rect x="155" y="70" width="10" height="330" fill="#8B6914"/>
+      <rect x="470" y="70" width="10" height="330" fill="#8B6914"/>
+      <rect x="155" y="150" width="325" height="8" fill="#A0820A"/>
+      <rect x="155" y="230" width="325" height="8" fill="#A0820A"/>
+      <rect x="155" y="310" width="325" height="8" fill="#A0820A"/>
+      <!-- Scaffold planks -->
+      <rect x="160" y="142" width="315" height="8" fill="#C8A44A"/>
+
+      <!-- Crane -->
+      <rect x="580" y="40" width="12" height="360" fill="#E8C340"/>
+      <rect x="580" y="40" width="200" height="12" fill="#E8C340"/>
+      <line x1="780" y1="52" x2="630" y2="220" stroke="#888" stroke-width="2"/>
+      <!-- Hanging load -->
+      <rect x="615" y="200" width="40" height="30" fill="#A0522D" stroke="#8B4513" stroke-width="2"/>
+      <line x1="635" y1="200" x2="670" y2="52" stroke="#666" stroke-width="1.5"/>
+
+      <!-- HAZARD 1: Worker no helmet, on scaffolding top -->
+      <!-- Worker body -->
+      <rect x="220" y="100" width="22" height="40" fill="#4169E1"/>
+      <rect x="224" y="140" width="7" height="30" fill="#1a1a2e"/>
+      <rect x="231" y="140" width="7" height="30" fill="#1a1a2e"/>
+      <!-- Arms -->
+      <rect x="208" y="104" width="12" height="6" fill="#FFD700" transform="rotate(-20,214,107)"/>
+      <rect x="242" y="104" width="12" height="6" fill="#FFD700" transform="rotate(20,248,107)"/>
+      <!-- HEAD - no helmet (bare head = hazard) -->
+      <circle cx="231" cy="95" r="13" fill="#FDBCB4"/>
+      <ellipse cx="231" cy="88" rx="10" ry="6" fill="#4A3728"/>
+      <!-- No helmet indicator squiggle -->
+      <text x="248" y="82" font-size="16" fill="#FF0000">✗</text>
+
+      <!-- HAZARD 2: Loose material at edge of scaffolding -->
+      <rect x="380" y="133" width="18" height="12" fill="#C84B4B" rx="2"/>
+      <rect x="400" y="136" width="12" height="9" fill="#C84B4B" rx="2"/>
+      <!-- Stack tipping -->
+      <rect x="415" y="130" width="14" height="10" fill="#B03030" rx="2" transform="rotate(25,422,135)"/>
+
+      <!-- HAZARD 3: Worker not wearing harness at height -->
+      <rect x="330" y="230" width="20" height="38" fill="#FF8C00"/>
+      <rect x="333" y="268" width="6" height="28" fill="#333"/>
+      <rect x="341" y="268" width="6" height="28" fill="#333"/>
+      <circle cx="340" cy="225" r="11" fill="#FDBCB4"/>
+      <ellipse cx="340" cy="218" rx="9" ry="5" fill="#2F4F4F"/>
+      <!-- No harness mark -->
+      <text x="353" y="240" font-size="14" fill="#FF4500">✗</text>
+
+      <!-- Ground workers -->
+      <!-- Worker 4 left -->
+      <rect x="90" y="340" width="20" height="45" fill="#228B22"/>
+      <rect x="93" y="385" width="6" height="25" fill="#333"/>
+      <rect x="101" y="385" width="6" height="25" fill="#333"/>
+      <circle cx="100" cy="332" r="11" fill="#FDBCB4"/>
+      <!-- Helmet ok -->
+      <ellipse cx="100" cy="325" rx="13" ry="7" fill="#FFFF00"/>
+      <rect x="87" y="326" width="26" height="5" fill="#FFFF00"/>
+
+      <!-- HAZARD 4: Spilled liquid / slippery surface, no warning sign -->
+      <ellipse cx="560" cy="395" rx="55" ry="18" fill="#4169E1" opacity="0.6"/>
+      <ellipse cx="545" cy="400" rx="30" ry="10" fill="#6495ED" opacity="0.5"/>
+      <!-- No wet floor sign -->
+
+      <!-- Worker stepping near spill -->
+      <rect x="600" y="340" width="20" height="45" fill="#8B0000"/>
+      <rect x="603" y="385" width="6" height="25" fill="#333"/>
+      <rect x="611" y="385" width="6" height="25" fill="#333"/>
+      <circle cx="610" cy="332" r="11" fill="#FDBCB4"/>
+      <ellipse cx="610" cy="325" rx="13" ry="7" fill="#FF4500"/>
+      <rect x="597" y="326" width="26" height="5" fill="#FF4500"/>
+
+      <!-- HAZARD 5: Open electrical panel -->
+      <rect x="700" y="280" width="55" height="70" fill="#C0C0C0" stroke="#888" stroke-width="2"/>
+      <rect x="703" y="283" width="49" height="61" fill="#333" stroke="#555" stroke-width="1"/>
+      <!-- Wires exposed -->
+      <line x1="715" y1="283" x2="715" y2="260" stroke="#FF0000" stroke-width="3"/>
+      <line x1="725" y1="283" x2="720" y2="255" stroke="#FFFF00" stroke-width="3"/>
+      <line x1="735" y1="283" x2="740" y2="258" stroke="#000" stroke-width="3"/>
+      <!-- Sparks -->
+      <text x="740" y="260" font-size="14" fill="#FFD700">⚡</text>
+      <!-- Panel door open -->
+      <rect x="655" y="283" width="45" height="61" fill="#C0C0C0" stroke="#888" stroke-width="2" rx="2"/>
+      <!-- Breakers -->
+      <rect x="660" y="292" width="35" height="8" fill="#333" rx="2"/>
+      <rect x="660" y="304" width="35" height="8" fill="#333" rx="2"/>
+      <rect x="660" y="316" width="35" height="8" fill="#333" rx="2"/>
+
+      <!-- HAZARD 6: Worker no safety shoes (sandals) -->
+      <rect x="770" y="345" width="20" height="43" fill="#4169E1"/>
+      <rect x="773" y="388" width="6" height="22" fill="#333"/>
+      <rect x="781" y="388" width="6" height="22" fill="#333"/>
+      <!-- Sandals instead of boots -->
+      <rect x="770" y="408" width="14" height="5" fill="#D2691E" rx="2"/>
+      <rect x="779" y="408" width="14" height="5" fill="#D2691E" rx="2"/>
+      <circle cx="780" cy="337" r="11" fill="#FDBCB4"/>
+      <ellipse cx="780" cy="330" rx="13" ry="7" fill="#FF4500"/>
+      <rect x="767" y="331" width="26" height="5" fill="#FF4500"/>
+      <!-- Nails on ground near worker -->
+      <text x="755" y="415" font-size="12" fill="#888">╪╪╪</text>
+
+      <!-- Labels -->
+      <text x="10" y="490" font-family="Arial" font-size="11" fill="rgba(0,0,0,0.4)">© Toga Safety — HSE Hazard Finder</text>
+    `,
+    hazards: [
+      {
+        id:'h1', x:25.7, y:20,
+        title:'Pekerja Tanpa Helm Safety',
+        icon:'⛑️',
+        danger:'Pekerja di ketinggian scaffolding tidak menggunakan helm pelindung. Benda jatuh dari atas bisa menyebabkan cedera kepala fatal.',
+        solution:'Wajib gunakan <strong>Helm Safety SNI Toga Safety</strong> di setiap area konstruksi, terutama area dengan risiko benda jatuh.',
+        product:'Helm Safety SNI',
+        waMsg:'Halo Toga Safety, saya ingin memesan Helm Safety SNI untuk area konstruksi. Mohon info stok dan harganya. Terima kasih!'
+      },
+      {
+        id:'h2', x:44.5, y:29,
+        title:'Material Tidak Aman di Tepi',
+        icon:'🪨',
+        danger:'Tumpukan material di tepi scaffolding tidak terikat dan dalam posisi miring — berpotensi jatuh dan menimpa pekerja di bawah.',
+        solution:'Gunakan <strong>jaring pengaman scaffolding</strong> dan pastikan semua material diikat atau ditempatkan di area aman dengan barricade tape.',
+        product:'Safety Net & Barricade Tape',
+        waMsg:'Halo Toga Safety, saya butuh jaring pengaman scaffolding dan barricade tape. Bisa info harga dan minimum order?'
+      },
+      {
+        id:'h3', x:37.8, y:53,
+        title:'Tidak Memakai Harness di Ketinggian',
+        icon:'🪢',
+        danger:'Pekerja bekerja di ketinggian tanpa full body harness. Risiko jatuh bebas yang bisa berakibat kematian.',
+        solution:'Wajib pakai <strong>Full Body Harness SNI</strong> untuk setiap pekerjaan di ketinggian lebih dari 1,8 meter.',
+        product:'Full Body Harness SNI',
+        waMsg:'Halo Toga Safety, saya membutuhkan Full Body Harness SNI. Bisa minta katalog produk dan harga terbarunya?'
+      },
+      {
+        id:'h4', x:57.5, y:83,
+        title:'Lantai Licin Tanpa Rambu Peringatan',
+        icon:'⚠️',
+        danger:'Ada ceceran cairan di lantai tanpa rambu peringatan. Pekerja berisiko terpeleset dan mengalami cedera serius.',
+        solution:'Pasang <strong>Safety Sign "Lantai Licin"</strong> segera dan gunakan <strong>sepatu safety anti-slip</strong> di seluruh area kerja.',
+        product:'Safety Sign & Sepatu Safety',
+        waMsg:'Halo Toga Safety, saya butuh safety sign lantai licin dan sepatu safety anti-slip. Mohon info lengkapnya ya!'
+      },
+      {
+        id:'h5', x:76.5, y:67,
+        title:'Panel Listrik Terbuka & Kabel Terbuka',
+        icon:'⚡',
+        danger:'Panel listrik terbuka dengan kabel telanjang terekspos. Risiko sengatan listrik dan kebakaran akibat hubungan arus pendek.',
+        solution:'Pasang <strong>LOTO (Lock Out Tag Out)</strong> pada panel dan gunakan <strong>sarung tangan listrik</strong> saat bekerja dekat instalasi listrik.',
+        product:'LOTO Kit & Sarung Tangan Listrik',
+        waMsg:'Halo Toga Safety, saya perlu LOTO Kit dan sarung tangan listrik. Bisa konsultasi untuk kebutuhan saya?'
+      },
+      {
+        id:'h6', x:86.7, y:83,
+        title:'Alas Kaki Tidak Sesuai Standar',
+        icon:'👟',
+        danger:'Pekerja menggunakan sandal biasa di area dengan paku berserakan. Risiko tertusuk paku, kejatuhan material, dan luka serius.',
+        solution:'Wajib gunakan <strong>Sepatu Safety Steel Toe & Anti-Puncture Toga</strong> di seluruh area konstruksi tanpa terkecuali.',
+        product:'Sepatu Safety Steel Toe',
+        waMsg:'Halo Toga Safety, saya mau memesan sepatu safety steel toe anti-puncture. Ada ukuran apa saja dan berapa harganya?'
+      },
+    ]
+  },
+
+  // ─── 1: PABRIK ───
+  {
+    name: '🏭 Area Pabrik',
+    time: 90,
+    bgColor: '#3a3a4a',
+    svgContent: `
+      <!-- Floor & walls -->
+      <rect width="900" height="500" fill="#D4C9B4"/>
+      <rect y="400" width="900" height="100" fill="#A09080"/>
+      <!-- Wall lines -->
+      <line x1="0" y1="400" x2="900" y2="400" stroke="#888" stroke-width="3"/>
+      <rect y="0" width="900" height="80" fill="#B0A898"/>
+      <!-- Ceiling pipes -->
+      <rect x="0" y="30" width="900" height="15" fill="#888"/>
+      <rect x="100" y="15" width="20" height="50" fill="#999"/>
+      <rect x="300" y="15" width="20" height="50" fill="#999"/>
+      <rect x="500" y="15" width="20" height="50" fill="#999"/>
+      <rect x="700" y="15" width="20" height="50" fill="#999"/>
+      <!-- Emergency light -->
+      <rect x="430" y="20" width="40" height="15" fill="#CC0000" rx="3"/>
+      <text x="432" y="32" font-family="Arial" font-size="9" fill="white" font-weight="bold">EXIT</text>
+
+      <!-- Machine 1 - large conveyor -->
+      <rect x="60" y="200" width="340" height="120" fill="#778899" stroke="#5a6a7a" stroke-width="3" rx="4"/>
+      <rect x="80" y="220" width="300" height="80" fill="#5a6a7a" rx="2"/>
+      <!-- Belt -->
+      <ellipse cx="110" cy="260" rx="30" ry="18" fill="#333"/>
+      <ellipse cx="350" cy="260" rx="30" ry="18" fill="#333"/>
+      <rect x="110" y="242" width="240" height="36" fill="#2a2a2a"/>
+      <!-- Products on conveyor -->
+      <rect x="150" y="248" width="25" height="25" fill="#E74C3C" rx="3"/>
+      <rect x="210" y="248" width="25" height="25" fill="#E74C3C" rx="3"/>
+      <rect x="270" y="248" width="25" height="25" fill="#E74C3C" rx="3"/>
+      <!-- Guard missing indicator -->
+      <text x="65" y="198" font-family="Arial" font-size="11" fill="#FF4444" font-weight="bold">GUARD MISSING</text>
+      <!-- Danger zone markings -->
+      <rect x="80" y="310" width="300" height="12" fill="#FFD700" rx="2" opacity="0.7"/>
+
+      <!-- Machine 2 - press machine -->
+      <rect x="580" y="150" width="120" height="220" fill="#607080" stroke="#4a5a6a" stroke-width="3" rx="4"/>
+      <rect x="595" y="170" width="90" height="80" fill="#4a5a6a" rx="2"/>
+      <!-- Press arm -->
+      <rect x="620" y="250" width="40" height="60" fill="#333" rx="2"/>
+      <!-- Spinning parts exposed -->
+      <circle cx="640" cy="310" r="18" fill="#555" stroke="#888" stroke-width="2"/>
+      <circle cx="640" cy="310" r="8" fill="#777"/>
+      <!-- Rotation indicator -->
+      <text x="625" y="308" font-family="Arial" font-size="14" fill="#FFD700">↻</text>
+
+      <!-- HAZARD 1: Worker no ear protection near loud machine -->
+      <rect x="420" y="280" width="22" height="42" fill="#228B22"/>
+      <rect x="423" y="322" width="7" height="25" fill="#333"/>
+      <rect x="432" y="322" width="7" height="25" fill="#333"/>
+      <circle cx="431" cy="272" r="12" fill="#FDBCB4"/>
+      <ellipse cx="431" cy="265" rx="12" ry="6" fill="#FFFF00"/>
+      <rect x="418" y="266" width="26" height="5" fill="#FFFF00"/>
+      <!-- No earmuff -->
+      <text x="445" y="275" font-family="Arial" font-size="14" fill="#FF4500">✗👂</text>
+
+      <!-- HAZARD 2: No machine guard on conveyor -->
+      <!-- already shown above with "GUARD MISSING" text and exposed belt -->
+
+      <!-- HAZARD 3: Chemical drum no label, leaking -->
+      <rect x="700" y="330" width="55" height="80" fill="#CC7722" stroke="#AA5500" stroke-width="2" rx="4"/>
+      <rect x="708" y="328" width="39" height="10" fill="#AA5500" rx="2"/>
+      <!-- Blank label -->
+      <rect x="710" y="355" width="35" height="30" fill="white" opacity="0.8"/>
+      <!-- Liquid leaking from bottom -->
+      <ellipse cx="727" cy="412" rx="25" ry="8" fill="#5B8F2E" opacity="0.7"/>
+      <rect x="740" y="408" width="8" height="12" fill="#5B8F2E" opacity="0.8"/>
+
+      <!-- Worker without gloves near chemical -->
+      <rect x="760" y="300" width="20" height="42" fill="#4169E1"/>
+      <rect x="763" y="342" width="6" height="25" fill="#333"/>
+      <rect x="771" y="342" width="6" height="25" fill="#333"/>
+      <!-- Hands reaching to drum, no gloves -->
+      <rect x="747" y="310" width="14" height="6" fill="#FDBCB4"/>
+      <circle cx="770" cy="293" r="11" fill="#FDBCB4"/>
+      <ellipse cx="770" cy="286" rx="12" ry="6" fill="#FFFF00"/>
+      <rect x="757" y="287" width="26" height="5" fill="#FFFF00"/>
+      <text x="785" y="318" font-family="Arial" font-size="12" fill="#FF4500">✗</text>
+
+      <!-- HAZARD 4: Forklift no warning horn / pedestrian in path -->
+      <!-- Forklift body -->
+      <rect x="200" y="370" width="100" height="50" fill="#F5C518" stroke="#D4A800" stroke-width="2" rx="3"/>
+      <rect x="190" y="375" width="20" height="15" fill="#D4A800" rx="2"/>
+      <!-- Forks -->
+      <rect x="300" y="390" width="60" height="6" fill="#D4A800"/>
+      <rect x="300" y="400" width="60" height="6" fill="#D4A800"/>
+      <!-- Wheels -->
+      <circle cx="220" cy="422" r="14" fill="#333"/>
+      <circle cx="280" cy="422" r="14" fill="#333"/>
+      <!-- Driver -->
+      <circle cx="245" cy="368" r="10" fill="#FDBCB4"/>
+      <rect x="235" y="378" width="20" height="25" fill="#CC6600"/>
+      <!-- Pedestrian in fork path -->
+      <rect x="330" y="355" width="18" height="42" fill="#8B0000"/>
+      <rect x="333" y="397" width="5" height="22" fill="#333"/>
+      <rect x="341" y="397" width="5" height="22" fill="#333"/>
+      <circle cx="339" cy="348" r="11" fill="#FDBCB4"/>
+      <ellipse cx="339" cy="341" rx="12" ry="6" fill="#FFFF00"/>
+      <!-- Danger arrow -->
+      <text x="305" y="365" font-family="Arial" font-size="18" fill="#FF0000">→⚠</text>
+
+      <!-- HAZARD 5: Fire extinguisher blocked by boxes -->
+      <rect x="830" y="310" width="35" height="70" fill="#CC0000" rx="4"/>
+      <rect x="840" y="300" width="15" height="12" fill="#888" rx="2"/>
+      <ellipse cx="847" cy="300" rx="10" ry="5" fill="#999"/>
+      <!-- Boxes blocking it -->
+      <rect x="800" y="340" width="40" height="40" fill="#A0522D" stroke="#8B4513" stroke-width="2"/>
+      <rect x="810" y="320" width="35" height="22" fill="#8B6914" stroke="#7a5a00" stroke-width="2"/>
+      <!-- Access blocked mark -->
+      <text x="795" y="315" font-family="Arial" font-size="11" fill="#FF0000" font-weight="bold">BLOCKED!</text>
+
+      <!-- HAZARD 6: Exposed rotating shaft / no guard -->
+      <rect x="480" y="180" width="80" height="40" fill="#607080" stroke="#4a5a6a" stroke-width="2" rx="3"/>
+      <!-- Rotating shaft exposed -->
+      <rect x="520" y="162" width="14" height="60" fill="#999" rx="3"/>
+      <circle cx="527" cy="162" r="8" fill="#777"/>
+      <circle cx="527" cy="162" r="4" fill="#555"/>
+      <!-- No guard warning -->
+      <text x="466" y="175" font-family="Arial" font-size="10" fill="#FF4444" font-weight="bold">⚠ NO GUARD</text>
+
+      <!-- Floor markings OK -->
+      <rect x="0" y="395" width="900" height="8" fill="#FFD700" opacity="0.5"/>
+
+      <text x="10" y="490" font-family="Arial" font-size="11" fill="rgba(0,0,0,0.3)">© Toga Safety — HSE Hazard Finder</text>
+    `,
+    hazards: [
+      {
+        id:'h1', x:48.5, y:64,
+        title:'Tanpa Pelindung Telinga (Ear Muff)',
+        icon:'👂',
+        danger:'Pekerja berada dekat mesin konveyor bersuara keras tanpa earmuff/earplug. Paparan bising >85 dB menyebabkan tuli permanen.',
+        solution:'Wajibkan penggunaan <strong>Ear Muff / Ear Plug SNI</strong> di semua area dengan tingkat kebisingan di atas 85 dB.',
+        product:'Ear Muff & Ear Plug SNI',
+        waMsg:'Halo Toga Safety, saya butuh ear muff dan ear plug SNI untuk pabrik. Bisa kirim katalog dan harga?'
+      },
+      {
+        id:'h2', x:22, y:58,
+        title:'Guard Mesin Konveyor Tidak Terpasang',
+        icon:'⚙️',
+        danger:'Bagian bergerak konveyor tidak memiliki pelindung (guard). Pakaian atau tangan pekerja bisa terseret dan menyebabkan cedera amputasi.',
+        solution:'Pasang <strong>Machine Guard</strong> pada semua bagian mesin bergerak dan lakukan inspeksi berkala sesuai standar K3 mesin.',
+        product:'Machine Guard & Safety Sign',
+        waMsg:'Halo Toga Safety, saya perlu konsultasi tentang machine guard dan safety sign untuk mesin produksi kami.'
+      },
+      {
+        id:'h3', x:80.5, y:78,
+        title:'Drum Kimia Tanpa Label & Bocor',
+        icon:'☣️',
+        danger:'Drum berisi bahan kimia tidak berlabel dan mengalami kebocoran. Pekerja menyentuhnya tanpa sarung tangan — risiko keracunan & luka bakar kimia.',
+        solution:'Semua bahan kimia wajib berlabel GHS/SDS, dan gunakan <strong>Sarung Tangan Chemical Resistant</strong> saat penanganan B3.',
+        product:'Sarung Tangan Chemical Resistant',
+        waMsg:'Halo Toga Safety, saya butuh sarung tangan chemical resistant dan label GHS untuk drum kimia di pabrik kami.'
+      },
+      {
+        id:'h4', x:37.5, y:85,
+        title:'Pejalan Kaki di Jalur Forklift',
+        icon:'🚜',
+        danger:'Pejalan kaki berada di jalur aktif forklift tanpa pembatas atau rambu peringatan. Risiko tertabrak dan tertimpa muatan forklift.',
+        solution:'Pasang <strong>Floor Marking Tape</strong> dan <strong>Safety Sign Jalur Forklift</strong> yang jelas, serta terapkan pemisahan jalur pejalan kaki.',
+        product:'Floor Marking Tape & Safety Sign',
+        waMsg:'Halo Toga Safety, saya butuh floor marking tape dan safety sign jalur forklift untuk area produksi kami.'
+      },
+      {
+        id:'h5', x:91.5, y:70,
+        title:'APAR Terhalang & Tidak Bisa Diakses',
+        icon:'🧯',
+        danger:'APAR (Alat Pemadam Api Ringan) tertutup tumpukan kardus. Saat kebakaran, APAR tidak bisa dijangkau dalam hitungan detik yang kritis.',
+        solution:'Pastikan area sekitar <strong>APAR selalu bebas halangan 1 meter</strong>, pasang rambu lokasi APAR yang terlihat jelas dari segala arah.',
+        product:'APAR & Safety Sign APAR',
+        waMsg:'Halo Toga Safety, saya mau konsultasi tentang penempatan APAR yang benar dan pemesanan APAR untuk pabrik kami.'
+      },
+      {
+        id:'h6', x:58, y:42,
+        title:'Poros Berputar Tanpa Pelindung',
+        icon:'⚙️',
+        danger:'Poros mesin berputar terekspos tanpa pelindung (guard). Risiko pakaian tersangkut dan menarik pekerja ke dalam mesin.',
+        solution:'Pasang <strong>pelindung poros (shaft guard)</strong> dan tempel <strong>Safety Sign "Bahaya Berputar"</strong> sesuai standar OSHA/K3.',
+        product:'Safety Sign & Machine Guard',
+        waMsg:'Halo Toga Safety, saya perlu safety sign bahaya mesin berputar dan konsultasi pemasangan machine guard.'
+      },
+    ]
+  },
+
+  // ─── 2: KANTOR ───
+  {
+    name: '🏢 Area Kantor',
+    time: 80,
+    bgColor: '#4a4a3a',
+    svgContent: `
+      <!-- Room background -->
+      <rect width="900" height="500" fill="#F5F0E8"/>
+      <!-- Carpet floor -->
+      <rect y="390" width="900" height="110" fill="#8B7B6B"/>
+      <!-- Wall -->
+      <rect y="0" width="900" height="390" fill="#EDE8DE"/>
+      <!-- Ceiling -->
+      <rect y="0" width="900" height="40" fill="#D4CEC4"/>
+      <!-- Floor-ceiling line -->
+      <line x1="0" y1="390" x2="900" y2="390" stroke="#B0A898" stroke-width="3"/>
+
+      <!-- Window -->
+      <rect x="30" y="60" width="120" height="180" fill="#87CEEB" stroke="#8B7355" stroke-width="6" rx="3"/>
+      <line x1="90" y1="60" x2="90" y2="240" stroke="#8B7355" stroke-width="4"/>
+      <line x1="30" y1="150" x2="150" y2="150" stroke="#8B7355" stroke-width="4"/>
+      <!-- Curtain -->
+      <path d="M30,60 Q50,120 30,180" fill="none" stroke="#C0A080" stroke-width="4"/>
+      <path d="M150,60 Q130,120 150,180" fill="none" stroke="#C0A080" stroke-width="4"/>
+
+      <!-- Desk 1 with computer -->
+      <rect x="200" y="280" width="200" height="110" fill="#8B6914" rx="4"/>
+      <rect x="220" y="270" width="160" height="80" fill="#C8A44A" rx="2"/>
+      <!-- Monitor -->
+      <rect x="260" y="200" width="100" height="75" fill="#2C3E50" rx="3" stroke="#1a252f" stroke-width="2"/>
+      <rect x="300" y="275" width="20" height="10" fill="#555"/>
+      <rect x="285" y="283" width="50" height="5" fill="#666"/>
+      <!-- Screen content -->
+      <rect x="267" y="207" width="86" height="61" fill="#3498DB" opacity="0.7"/>
+
+      <!-- HAZARD 1: Cables across walkway -->
+      <path d="M390,380 Q420,360 380,340 Q350,320 400,300 Q440,280 410,260" fill="none" stroke="#555" stroke-width="5"/>
+      <path d="M395,383 Q425,363 385,343 Q355,323 405,303 Q445,283 415,263" fill="none" stroke="#CC0000" stroke-width="3"/>
+      <!-- Walking person about to trip -->
+      <rect x="400" y="320" width="18" height="40" fill="#2980B9"/>
+      <rect x="402" y="360" width="5" height="22" fill="#333"/>
+      <rect x="411" y="360" width="5" height="22" fill="#333"/>
+      <circle cx="409" cy="313" r="11" fill="#FDBCB4"/>
+      <ellipse cx="409" cy="307" rx="11" ry="5" fill="#8B4513"/>
+
+      <!-- Desk 2 -->
+      <rect x="550" y="280" width="180" height="110" fill="#8B6914" rx="4"/>
+      <rect x="570" y="270" width="140" height="80" fill="#C8A44A" rx="2"/>
+      <rect x="590" y="200" width="100" height="75" fill="#2C3E50" rx="3" stroke="#1a252f" stroke-width="2"/>
+      <rect x="630" y="275" width="20" height="10" fill="#555"/>
+      <rect x="615" y="283" width="50" height="5" fill="#666"/>
+      <rect x="597" y="207" width="86" height="61" fill="#27AE60" opacity="0.6"/>
+
+      <!-- HAZARD 2: Worker bad posture + no ergonomic setup -->
+      <!-- Worker hunched -->
+      <rect x="570" y="290" width="18" height="40" fill="#8B4513"/>
+      <rect x="573" y="330" width="5" height="28" fill="#333"/>
+      <rect x="581" y="330" width="5" height="28" fill="#333"/>
+      <circle cx="579" cy="283" r="11" fill="#FDBCB4"/>
+      <ellipse cx="579" cy="277" rx="11" ry="5" fill="#4A3728"/>
+      <!-- Hunching indicator - curved back -->
+      <path d="M573,288 Q566,305 573,320" fill="none" stroke="#FF4500" stroke-width="3"/>
+      <text x="592" y="296" font-family="Arial" font-size="10" fill="#FF4500">postur buruk!</text>
+
+      <!-- HAZARD 3: Overloaded power strip -->
+      <rect x="170" y="360" width="80" height="20" fill="#EEE" stroke="#CCC" stroke-width="1" rx="3"/>
+      <rect x="176" y="364" width="10" height="10" fill="#333" rx="2"/>
+      <rect x="192" y="364" width="10" height="10" fill="#333" rx="2"/>
+      <rect x="208" y="364" width="10" height="10" fill="#333" rx="2"/>
+      <rect x="224" y="364" width="10" height="10" fill="#333" rx="2"/>
+      <rect x="240" y="364" width="10" height="10" fill="#333" rx="2"/>
+      <!-- 5 plugs in it — overloaded -->
+      <rect x="179" y="356" width="6" height="10" fill="#888"/>
+      <rect x="195" y="356" width="6" height="10" fill="#888"/>
+      <rect x="211" y="356" width="6" height="10" fill="#888"/>
+      <rect x="227" y="356" width="6" height="10" fill="#888"/>
+      <rect x="243" y="356" width="6" height="10" fill="#888"/>
+      <!-- Smoke / heat indicator -->
+      <text x="155" y="358" font-family="Arial" font-size="14" fill="#FF6600">🌡️</text>
+      <text x="155" y="345" font-family="Arial" font-size="9" fill="#CC0000" font-weight="bold">OVERLOAD!</text>
+
+      <!-- HAZARD 4: Exit sign missing / blocked emergency exit -->
+      <rect x="750" y="200" width="80" height="180" fill="#8B7355" stroke="#6B5335" stroke-width="3" rx="4"/>
+      <rect x="758" y="208" width="64" height="164" fill="#5B9BD5" opacity="0.4"/>
+      <!-- Door handle -->
+      <circle cx="800" cy="295" r="6" fill="#C8A44A"/>
+      <!-- EXIT sign removed/off -->
+      <rect x="745" y="175" width="90" height="22" fill="#888" rx="3"/>
+      <text x="755" y="190" font-family="Arial" font-size="11" fill="#CCC" font-weight="bold">EXIT (mati)</text>
+      <!-- Boxes blocking exit -->
+      <rect x="750" y="358" width="45" height="42" fill="#A0522D" stroke="#8B4513" stroke-width="2"/>
+      <rect x="760" y="340" width="45" height="22" fill="#8B6914" stroke="#7a5a00" stroke-width="2"/>
+      <!-- X mark -->
+      <text x="730" y="370" font-family="Arial" font-size="22" fill="#FF0000" font-weight="bold">🚫</text>
+
+      <!-- HAZARD 5: Coffee/liquid near electrical equipment -->
+      <!-- Coffee cup near server/computer -->
+      <rect x="456" y="180" width="60" height="100" fill="#607080" stroke="#4a5a6a" stroke-width="2" rx="4"/>
+      <rect x="462" y="190" width="48" height="80" fill="#333" rx="2"/>
+      <!-- Blinking lights on server -->
+      <circle cx="472" cy="198" r="4" fill="#27AE60"/>
+      <circle cx="484" cy="198" r="4" fill="#27AE60"/>
+      <circle cx="496" cy="198" r="4" fill="#E74C3C"/>
+      <!-- Coffee cup on server! -->
+      <ellipse cx="490" cy="178" rx="14" ry="6" fill="#8B4513"/>
+      <rect x="476" y="165" width="28" height="15" fill="#D2691E" rx="4"/>
+      <!-- Steam -->
+      <path d="M484,163 Q482,155 484,148" fill="none" stroke="#CCC" stroke-width="2"/>
+      <path d="M490,163 Q492,155 490,148" fill="none" stroke="#CCC" stroke-width="2"/>
+      <!-- Spilling liquid -->
+      <ellipse cx="505" cy="182" rx="15" ry="5" fill="#6F4E37" opacity="0.7"/>
+
+      <!-- People in office -->
+      <rect x="300" y="285" width="18" height="40" fill="#27AE60"/>
+      <rect x="302" y="325" width="5" height="28" fill="#333"/>
+      <rect x="311" y="325" width="5" height="28" fill="#333"/>
+      <circle cx="309" cy="278" r="11" fill="#FDBCB4"/>
+      <ellipse cx="309" cy="272" rx="11" ry="5" fill="#4A3728"/>
+
+      <text x="10" y="490" font-family="Arial" font-size="11" fill="rgba(0,0,0,0.3)">© Toga Safety — HSE Hazard Finder</text>
+    `,
+    hazards: [
+      {
+        id:'h1', x:44, y:70,
+        title:'Kabel Melintang di Jalur Jalan',
+        icon:'🔌',
+        danger:'Kabel listrik melintang di jalur lalu lintas karyawan tanpa pelindung atau penanda. Risiko tersandung, jatuh, dan korsleting listrik.',
+        solution:'Gunakan <strong>Cable Protector / Kabel Cover</strong> dan tempel <strong>Floor Marking Tape</strong> di area kabel untuk mencegah tersandung.',
+        product:'Cable Protector & Floor Marking',
+        waMsg:'Halo Toga Safety, saya butuh cable protector dan floor marking tape untuk kantor kami. Bisa info harga?'
+      },
+      {
+        id:'h2', x:64.5, y:63,
+        title:'Postur Kerja Buruk & Meja Tidak Ergonomis',
+        icon:'🪑',
+        danger:'Karyawan bekerja dengan postur membungkuk di kursi dan meja yang tidak ergonomis. Menyebabkan nyeri punggung, leher, dan MSDs (Musculoskeletal Disorders) jangka panjang.',
+        solution:'Lakukan <strong>asesmen ergonomi tempat kerja</strong> dan sediakan kursi ergonomis, penyangga monitor, dan keyboard tray yang sesuai.',
+        product:'Peralatan Ergonomi Kantor',
+        waMsg:'Halo Toga Safety, saya ingin konsultasi tentang ergonomi kantor dan kebutuhan APD administratif untuk tim kami.'
+      },
+      {
+        id:'h3', x:22, y:77,
+        title:'Stop Kontak Kelebihan Beban (Overload)',
+        icon:'🔌',
+        danger:'Satu stop kontak digunakan untuk 5 perangkat sekaligus. Kelebihan beban listrik menyebabkan panas berlebih dan risiko kebakaran.',
+        solution:'Gunakan stop kontak berkapasitas tinggi dengan <strong>circuit breaker otomatis</strong>, atau pasang instalasi listrik tambahan sesuai kebutuhan.',
+        product:'Safety Electrical Equipment',
+        waMsg:'Halo Toga Safety, saya butuh konsultasi tentang keselamatan instalasi listrik di kantor kami. Bisa bantu?'
+      },
+      {
+        id:'h4', x:83, y:73,
+        title:'Pintu Darurat Terhalang & Rambu Mati',
+        icon:'🚪',
+        danger:'Pintu darurat (emergency exit) terhalang tumpukan kardus dan rambu EXIT dalam kondisi mati. Saat darurat, evakuasi akan terhambat.',
+        solution:'Pastikan <strong>jalur evakuasi bebas halangan setiap saat</strong>, gunakan <strong>Emergency Exit Sign LED</strong> yang selalu menyala.',
+        product:'Emergency Exit Sign LED',
+        waMsg:'Halo Toga Safety, saya butuh emergency exit sign LED dan rambu evakuasi untuk kantor kami. Bisa info produknya?'
+      },
+      {
+        id:'h5', x:52.5, y:43,
+        title:'Minuman di Dekat Peralatan Server/Listrik',
+        icon:'☕',
+        danger:'Gelas kopi diletakkan di atas server/peralatan listrik. Tumpahan cairan bisa menyebabkan korsleting, kerusakan data, dan kebakaran.',
+        solution:'Buat kebijakan <strong>"No Food & Drink"</strong> di area server/listrik, dan pasang <strong>Safety Sign "Dilarang Membawa Minuman"</strong>.',
+        product:'Safety Sign Area Larangan',
+        waMsg:'Halo Toga Safety, saya butuh berbagai safety sign untuk area kantor dan server room. Bisa kirim katalognya?'
+      },
+    ]
+  }
+];
+
+// ══════════════════════════════════════════════════════
+// GAME STATE
+// ══════════════════════════════════════════════════════
+let selectedScene = -1;
+let currentScene  = null;
+let foundCount    = 0;
+let score         = 0;
+let timeLeft      = 0;
+let timerInterval = null;
+let activeHazard  = null;
+let wrongClicks   = 0;
+
+function selectScene(idx, el) {
+  selectedScene = idx;
+  document.querySelectorAll('.scene-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  const btn = document.getElementById('btnStart');
+  btn.disabled = false;
+  btn.textContent = 'Mulai Pencarian! 🔍';
+}
+
+function startGame() {
+  if (selectedScene < 0) return;
+  currentScene = SCENES[selectedScene];
+  foundCount = 0;
+  score = 0;
+  wrongClicks = 0;
+  timeLeft = currentScene.time;
+  activeHazard = null;
+
+  document.getElementById('introScreen').style.display = 'none';
+  document.getElementById('endScreen').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'block';
+
+  document.getElementById('hudScene').textContent = currentScene.name;
+  renderScene();
+  startTimer();
+}
+
+function renderScene() {
+  const wrap = document.getElementById('sceneWrap');
+  wrap.innerHTML = '';
+
+  // SVG
+  const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svgEl.setAttribute('viewBox','0 0 900 500');
+  svgEl.setAttribute('xmlns','http://www.w3.org/2000/svg');
+  svgEl.innerHTML = currentScene.svgContent;
+  wrap.appendChild(svgEl);
+
+  // Hotspots
+  currentScene.hazards.forEach((h, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'hotspot';
+    dot.id = 'hs_' + h.id;
+    dot.style.left = h.x + '%';
+    dot.style.top  = h.y + '%';
+    dot.style.animationDelay = (i * 0.2) + 's';
+    dot.innerHTML = '<div class="hotspot-ring"></div>';
+    dot.addEventListener('click', (e) => {
+      e.stopPropagation();
+      onHazardClick(h, dot);
+    });
+    wrap.appendChild(dot);
+  });
+
+  // Dots HUD
+  const dotsEl = document.getElementById('hazardDots');
+  dotsEl.innerHTML = '';
+  currentScene.hazards.forEach(() => {
+    const d = document.createElement('div');
+    d.className = 'h-dot';
+    dotsEl.appendChild(d);
+  });
+
+  updateHUD();
+}
+
+function onHazardClick(hazard, dotEl) {
+  if (dotEl.classList.contains('found')) return;
+  if (activeHazard) return; // popup already open
+
+  dotEl.classList.add('found');
+  foundCount++;
+  score += 100;
+
+  // Update dot
+  const dots = document.querySelectorAll('.h-dot');
+  if (dots[foundCount - 1]) dots[foundCount - 1].classList.add('found');
+
+  updateHUD();
+  showPopup(hazard);
+}
+
+function handleSceneClick(e) {
+  if (activeHazard) return;
+  if (e.target.closest('.hotspot')) return;
+
+  // Wrong click
+  wrongClicks++;
+  score = Math.max(0, score - 5);
+  updateHUD();
+
+  const wrap = document.getElementById('sceneWrap');
+  const rect = wrap.getBoundingClientRect();
+  const ripple = document.createElement('div');
+  ripple.className = 'wrong-click';
+  ripple.style.left = ((e.clientX - rect.left) / rect.width * 100) + '%';
+  ripple.style.top  = ((e.clientY - rect.top)  / rect.height * 100) + '%';
+  wrap.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 800);
+}
+
+function updateHUD() {
+  document.getElementById('hudTimer').textContent = timeLeft;
+  document.getElementById('hudScore').textContent = score;
+  const timerEl = document.getElementById('hudTimer');
+  timerEl.classList.toggle('danger', timeLeft <= 15);
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateHUD();
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      endGame(false);
+    }
+  }, 1000);
+}
+
+// ── Popup ──
+function showPopup(hazard) {
+  activeHazard = hazard;
+  clearInterval(timerInterval); // pause timer during popup
+
+  document.getElementById('popIcon').textContent    = hazard.icon;
+  document.getElementById('popTitle').textContent   = hazard.title;
+  document.getElementById('popDanger').innerHTML    = hazard.danger;
+  document.getElementById('popSolution').innerHTML  = hazard.solution;
+
+  document.getElementById('popBuyBtn').href = 'https://www.togasafety.id/daftar-produk';
+
+  document.getElementById('popupOverlay').classList.add('show');
+}
+
+function closePopup() {
+  document.getElementById('popupOverlay').classList.remove('show');
+  activeHazard = null;
+
+  if (foundCount >= currentScene.hazards.length) {
+    endGame(true);
+    return;
+  }
+  // Resume timer
+  if (timeLeft > 0) startTimer();
+}
+
+// ── End Game ──
+function endGame(win) {
+  clearInterval(timerInterval);
+  document.getElementById('gameScreen').style.display = 'none';
+  document.getElementById('popupOverlay').classList.remove('show');
+
+  const endEl = document.getElementById('endScreen');
+  endEl.className = 'end-screen ' + (win ? 'win' : 'lose');
+  endEl.style.display = 'block';
+
+  document.getElementById('endIcon').textContent = win ? '🏆' : '⏰';
+  document.getElementById('endTitle').textContent = win
+    ? 'SEMUA BAHAYA DITEMUKAN!'
+    : 'WAKTU HABIS!';
+  document.getElementById('endDesc').textContent = win
+    ? `Luar biasa! Anda berhasil mengidentifikasi semua ${currentScene.hazards.length} bahaya di lokasi kerja.`
+    : `Waktu habis! Anda berhasil menemukan ${foundCount} dari ${currentScene.hazards.length} bahaya.`;
+
+  document.getElementById('statFound').textContent = foundCount + '/' + currentScene.hazards.length;
+  document.getElementById('statScore').textContent = score;
+  document.getElementById('statTime').textContent  = timeLeft;
+}
+
+function replayGame() {
+  document.getElementById('endScreen').style.display = 'none';
+  startGame();
+}
+
+function goMenu() {
+  clearInterval(timerInterval);
+  document.getElementById('endScreen').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'none';
+  document.getElementById('introScreen').style.display = 'block';
+}
+</script>
+</body>
+</html>
