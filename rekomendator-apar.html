@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rekomendator Jenis APAR</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --red: #C0392B;
+    --red-light: #FDECEA;
+    --red-glow: rgba(192,57,43,0.15);
+    --orange: #E67E22;
+    --green: #27AE60;
+    --blue: #2980B9;
+    --charcoal: #1C1C2E;
+    --ink: #2C2C3E;
+    --gray-bg: #F4F4EF;
+    --gray-line: #E4E4DC;
+    --gray-muted: #9B9B8F;
+    --white: #FEFEFE;
+    --shadow-card: 0 8px 40px rgba(28,28,46,0.10), 0 1px 4px rgba(0,0,0,0.05);
+    --radius: 18px;
+    --radius-sm: 11px;
+  }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--gray-bg);
+    color: var(--charcoal);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+
+  .widget {
+    width: 100%;
+    max-width: 660px;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--charcoal);
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 26px 32px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::after {
+    content: '🔥';
+    position: absolute;
+    right: 28px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 50px;
+    opacity: 0.15;
+    pointer-events: none;
+  }
+  .header-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--red); color: white;
+    font-size: 10px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 20px; margin-bottom: 10px;
+  }
+  .header h1 { font-size: 20px; font-weight: 800; color: #fff; line-height: 1.25; }
+  .header p  { font-size: 12.5px; color: rgba(255,255,255,0.55); margin-top: 5px; }
+
+  /* ── Card ── */
+  .card {
+    background: var(--white);
+    border-radius: 0 0 var(--radius) var(--radius);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+  }
+
+  /* ── Step progress ── */
+  .progress-bar {
+    display: flex; align-items: center;
+    padding: 18px 32px 0;
+    gap: 0;
+  }
+  .step-dot {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    position: relative; flex: 1;
+  }
+  .step-dot:last-child { flex: none; }
+  .dot-circle {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 2px solid var(--gray-line);
+    background: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    color: var(--gray-muted);
+    transition: all 0.3s;
+    position: relative; z-index: 1;
+  }
+  .dot-circle.active  { border-color: var(--red); background: var(--red); color: white; }
+  .dot-circle.done    { border-color: var(--green); background: var(--green); color: white; }
+  .dot-label { font-size: 10px; font-weight: 600; color: var(--gray-muted); white-space: nowrap; }
+  .dot-label.active { color: var(--red); }
+  .dot-label.done   { color: var(--green); }
+  .step-line {
+    flex: 1; height: 2px; background: var(--gray-line);
+    margin-bottom: 16px; transition: background 0.4s;
+  }
+  .step-line.done { background: var(--green); }
+
+  /* ── Step content ── */
+  .steps-wrap { padding: 24px 32px 28px; }
+
+  .step-panel { display: none; animation: fadeUp 0.28s ease; }
+  .step-panel.visible { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .step-q {
+    font-size: 15px; font-weight: 700; color: var(--ink);
+    margin-bottom: 5px;
+  }
+  .step-hint { font-size: 11.5px; color: var(--gray-muted); margin-bottom: 16px; }
+
+  /* Option cards */
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .opt-btn {
+    border: 2px solid var(--gray-line);
+    border-radius: var(--radius-sm);
+    padding: 14px 14px 12px;
+    background: var(--white);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.18s ease;
+    position: relative;
+  }
+  .opt-btn:hover { border-color: var(--red); background: var(--red-light); }
+  .opt-btn.selected {
+    border-color: var(--red);
+    background: var(--red-light);
+    box-shadow: 0 0 0 3px var(--red-glow);
+  }
+  .opt-icon { font-size: 26px; margin-bottom: 7px; display: block; }
+  .opt-title { font-size: 12.5px; font-weight: 700; color: var(--ink); display: block; }
+  .opt-desc  { font-size: 10.5px; color: var(--gray-muted); margin-top: 3px; line-height: 1.4; display: block; }
+  .opt-check {
+    position: absolute; top: 9px; right: 9px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--red); color: white;
+    font-size: 10px; font-weight: 700;
+    display: none; align-items: center; justify-content: center;
+  }
+  .opt-btn.selected .opt-check { display: flex; }
+
+  /* Nav buttons */
+  .nav-row { display: flex; justify-content: space-between; align-items: center; margin-top: 22px; gap: 12px; }
+  .btn-back {
+    padding: 10px 20px; border: 2px solid var(--gray-line); border-radius: var(--radius-sm);
+    background: transparent; font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 600;
+    color: var(--gray-muted); cursor: pointer; transition: all 0.15s;
+  }
+  .btn-back:hover { border-color: var(--charcoal); color: var(--charcoal); }
+  .btn-next {
+    padding: 11px 28px; border: none; border-radius: var(--radius-sm);
+    background: var(--red); font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 700;
+    color: white; cursor: pointer; transition: all 0.18s;
+    opacity: 0.4; pointer-events: none;
+  }
+  .btn-next.enabled { opacity: 1; pointer-events: auto; }
+  .btn-next.enabled:hover { background: #a93226; transform: translateY(-1px); }
+
+  /* ── Result panel ── */
+  .result-panel { display: none; animation: fadeUp 0.3s ease; }
+  .result-panel.visible { display: block; }
+
+  .result-top {
+    background: linear-gradient(135deg, var(--charcoal), #2c2c4a);
+    padding: 24px 28px;
+    margin: 0 0 0 0;
+    position: relative; overflow: hidden;
+  }
+  .result-top::before {
+    content: '';
+    position: absolute; bottom: -40px; right: -40px;
+    width: 140px; height: 140px; border-radius: 50%;
+    background: rgba(192,57,43,0.12);
+  }
+  .result-label {
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: rgba(255,255,255,0.45); font-weight: 600; margin-bottom: 8px;
+  }
+  .result-type {
+    font-size: 22px; font-weight: 800; color: white; line-height: 1.2;
+  }
+  .result-type-sub {
+    font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 4px;
+  }
+  .result-badge {
+    display: inline-block;
+    background: var(--red); color: white;
+    font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 20px; margin-top: 10px;
+  }
+
+  .result-body { padding: 22px 28px 0; }
+
+  .result-reason {
+    background: #F0FAF4; border-left: 3px solid var(--green);
+    border-radius: var(--radius-sm); padding: 13px 16px; margin-bottom: 16px;
+  }
+  .result-reason .r-title { font-size: 11px; font-weight: 700; color: var(--green); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; }
+  .result-reason p { font-size: 12.5px; color: #1a5c35; line-height: 1.55; }
+
+  /* Matrix table */
+  .matrix-title { font-size: 11px; font-weight: 700; color: var(--gray-muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
+  .matrix { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .matrix th { background: var(--charcoal); color: rgba(255,255,255,0.75); font-weight: 600; padding: 7px 10px; text-align: left; }
+  .matrix th:first-child { border-radius: 6px 0 0 0; }
+  .matrix th:last-child  { border-radius: 0 6px 0 0; }
+  .matrix td { padding: 7px 10px; border-bottom: 1px solid var(--gray-line); color: var(--ink); }
+  .matrix tr:last-child td { border-bottom: none; }
+  .matrix tr.highlight td { background: #FFF8E1; font-weight: 600; }
+  .badge-sc  { color: var(--green); font-weight: 700; }
+  .badge-ok  { color: var(--blue); font-weight: 600; }
+  .badge-no  { color: var(--gray-muted); }
+  .badge-danger { color: var(--red); font-weight: 700; }
+
+  /* Warning */
+  .result-warn {
+    display: none;
+    align-items: flex-start; gap: 10px;
+    background: #FFF3CD; border-left: 3px solid var(--orange);
+    border-radius: var(--radius-sm); padding: 12px 14px; margin-top: 14px;
+  }
+  .result-warn.show { display: flex; }
+  .result-warn .w-icon { font-size: 16px; flex-shrink: 0; }
+  .result-warn p { font-size: 11.5px; color: #7a4500; line-height: 1.5; }
+
+  /* WA CTA */
+  .wa-section { padding: 20px 28px 28px; }
+  .wa-divider { height: 1px; background: var(--gray-line); margin-bottom: 18px; }
+  .wa-title { font-size: 12px; font-weight: 700; color: var(--gray-muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+  .wa-box {
+    background: #EAFAF1; border-radius: var(--radius-sm);
+    padding: 14px 16px; font-size: 12px;
+    color: #145A32; border: 1.5px solid #A9DFBF;
+    font-style: italic; line-height: 1.55; margin-bottom: 14px;
+  }
+  .wa-box strong { font-style: normal; font-weight: 700; }
+  .btn-wa {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 13px;
+    background: #25D366; border: none; border-radius: var(--radius-sm);
+    font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 700;
+    color: white; cursor: pointer; text-decoration: none;
+    transition: background 0.18s, transform 0.15s;
+  }
+  .btn-wa:hover { background: #1aab52; transform: translateY(-1px); }
+  .btn-wa svg { width: 20px; height: 20px; fill: white; flex-shrink: 0; }
+
+  .btn-reset {
+    display: block; width: 100%; margin-top: 10px;
+    padding: 10px; border: 2px solid var(--gray-line);
+    border-radius: var(--radius-sm); background: transparent;
+    font-family: 'Sora', sans-serif; font-size: 12.5px; font-weight: 600;
+    color: var(--gray-muted); cursor: pointer; transition: all 0.15s; text-align: center;
+  }
+  .btn-reset:hover { border-color: var(--charcoal); color: var(--charcoal); }
+
+  @media (max-width: 480px) {
+    .header { padding: 20px 18px 18px; }
+    .progress-bar { padding: 16px 18px 0; }
+    .steps-wrap { padding: 18px 18px 22px; }
+    .result-top { padding: 20px 18px; }
+    .result-body { padding: 18px 18px 0; }
+    .wa-section { padding: 16px 18px 22px; }
+    .options-grid { grid-template-columns: 1fr; }
+    .matrix { font-size: 10px; }
+    .matrix th, .matrix td { padding: 6px 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="widget">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-badge">🔥 Rekomendasi Otomatis</div>
+    <h1>Rekomendator Jenis APAR</h1>
+    <p>Jawab 2 pertanyaan — kami tentukan APAR yang tepat untuk Anda.</p>
+  </div>
+
+  <div class="card">
+
+    <!-- Progress -->
+    <div class="progress-bar" id="progressBar">
+      <div class="step-dot">
+        <div class="dot-circle active" id="dot1">1</div>
+        <div class="dot-label active" id="lbl1">Lokasi</div>
+      </div>
+      <div class="step-line" id="line1"></div>
+      <div class="step-dot">
+        <div class="dot-circle" id="dot2">2</div>
+        <div class="dot-label" id="lbl2">Benda Dominan</div>
+      </div>
+      <div class="step-line" id="line2"></div>
+      <div class="step-dot">
+        <div class="dot-circle" id="dot3">✓</div>
+        <div class="dot-label" id="lbl3">Hasil</div>
+      </div>
+    </div>
+
+    <!-- Steps -->
+    <div class="steps-wrap">
+
+      <!-- Step 1 -->
+      <div class="step-panel visible" id="step1">
+        <div class="step-q">Di mana Anda akan menempatkan APAR ini?</div>
+        <div class="step-hint">Pilih lokasi yang paling sesuai dengan kebutuhan Anda.</div>
+        <div class="options-grid">
+          <button class="opt-btn" data-val="kantor" onclick="select(1, this)">
+            <span class="opt-check">✓</span>
+            <span class="opt-icon">🏢</span>
+            <span class="opt-title">Kantor / Ruko / Rumah</span>
+            <span class="opt-desc">Area administrasi, toko, ruang kerja umum</span>
+          </button>
+          <button class="opt-btn" data-val="server" onclick="select(1, this)">
+            <span class="opt-check">✓</span>
+            <span class="opt-icon">💻</span>
+            <span class="opt-title">Ruang Server / Lab</span>
+            <span class="opt-desc">Ruang komputer, data center, laboratorium</span>
+          </button>
+          <button class="opt-btn" data-val="industri" onclick="select(1, this)">
+            <span class="opt-check">✓</span>
+            <span class="opt-icon">🏭</span>
+            <span class="opt-title">Bengkel / Gudang / Dapur</span>
+            <span class="opt-desc">Pabrik, gudang, bengkel, dapur restoran</span>
+          </button>
+          <button class="opt-btn" data-val="spbu" onclick="select(1, this)">
+            <span class="opt-check">✓</span>
+            <span class="opt-icon">⛽</span>
+            <span class="opt-title">SPBU / Gudang Kimia</span>
+            <span class="opt-desc">Pom bensin, penyimpanan bahan kimia cair</span>
+          </button>
+        </div>
+        <div class="nav-row">
+          <span></span>
+          <button class="btn-next" id="next1" onclick="goStep(2)">Lanjut →</button>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step-panel" id="step2">
+        <div class="step-q">Benda apa yang paling dominan di area tersebut?</div>
+        <div class="step-hint">Ini menentukan kelas kebakaran dan jenis media pemadam yang tepat.</div>
+        <div class="options-grid">
+          <button class="opt-btn" data-val="padat" onclick="select(2, this)">
+            <span class="opt-check">✓</span>
+            <span class="opt-icon">📦</span>
+            <span class="opt-title">Benda Padat</span>
+            <span class="opt-desc">Kayu, kertas, plastik, kain, perabotan (Kelas A)</span>
+          </button>
+          <button class="opt-btn" data-val="listrik" onclick="select(2, this)">
+            <span class="opt-check">✓</span>
+            <span class="opt-icon">⚡</span>
+            <span class="opt-title">Peralatan Listrik</span>
+            <span class="opt-desc">Komputer, kabel, panel listrik, mesin elektronik (Kelas C)</span>
+          </button>
+          <button class="opt-btn" data-val="cair" onclick="select(2, this)">
+            <span class="opt-check">✓</span>
+            <span class="opt-icon">🛢️</span>
+            <span class="opt-title">Cairan / Gas Mudah Terbakar</span>
+            <span class="opt-desc">Bensin, solar, cat, minyak, gas elpiji (Kelas B)</span>
+          </button>
+          <button class="opt-btn" data-val="campuran" onclick="select(2, this)">
+            <span class="opt-check">✓</span>
+            <span class="opt-icon">🔀</span>
+            <span class="opt-title">Campuran / Umum</span>
+            <span class="opt-desc">Kombinasi berbagai jenis benda dan peralatan</span>
+          </button>
+        </div>
+        <div class="nav-row">
+          <button class="btn-back" onclick="goStep(1)">← Kembali</button>
+          <button class="btn-next" id="next2" onclick="showResult()">Lihat Rekomendasi →</button>
+        </div>
+      </div>
+
+    </div><!-- /steps-wrap -->
+
+    <!-- Result -->
+    <div class="result-panel" id="resultPanel">
+
+      <div class="result-top">
+        <div class="result-label">Rekomendasi Terbaik untuk Anda</div>
+        <div class="result-type" id="resType">—</div>
+        <div class="result-type-sub" id="resTypeSub">—</div>
+        <div class="result-badge" id="resBadge">—</div>
+      </div>
+
+      <div class="result-body">
+        <div class="result-reason">
+          <div class="r-title">✅ Mengapa ini pilihan tepat?</div>
+          <p id="resReason">—</p>
+        </div>
+
+        <div class="matrix-title">Kesesuaian Semua Jenis APAR</div>
+        <table class="matrix">
+          <thead>
+            <tr>
+              <th>Jenis Media</th>
+              <th>Kelas A (Padat)</th>
+              <th>Kelas B (Cair)</th>
+              <th>Kelas C (Listrik)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr id="row-powder">
+              <td>Dry Chemical Powder</td>
+              <td class="badge-sc">✔ Sangat Cocok</td>
+              <td class="badge-sc">✔ Sangat Cocok</td>
+              <td class="badge-sc">✔ Sangat Cocok</td>
+            </tr>
+            <tr id="row-co2">
+              <td>Carbon Dioxide (CO₂)</td>
+              <td class="badge-no">✘ Kurang Efektif</td>
+              <td class="badge-ok">● Cocok</td>
+              <td class="badge-sc">✔ Sangat Cocok</td>
+            </tr>
+            <tr id="row-foam">
+              <td>Foam / Busa (AFFF)</td>
+              <td class="badge-sc">✔ Sangat Cocok</td>
+              <td class="badge-sc">✔ Sangat Cocok</td>
+              <td class="badge-danger">⚠ BERBAHAYA</td>
+            </tr>
+            <tr id="row-clean">
+              <td>Clean Agent</td>
+              <td class="badge-ok">● Cocok</td>
+              <td class="badge-ok">● Cocok</td>
+              <td class="badge-sc">✔ Sangat Cocok</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="result-warn" id="resWarn">
+          <span class="w-icon">⚠️</span>
+          <p id="resWarnText">—</p>
+        </div>
+      </div>
+
+      <div class="wa-section">
+        <div class="wa-divider"></div>
+        <div class="wa-title">Pesan via WhatsApp</div>
+        <div class="wa-box" id="waText">—</div>
+        <a class="btn-wa" id="btnWa" href="#" target="_blank">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          Konsultasikan via WhatsApp
+        </a>
+        <button class="btn-reset" onclick="resetAll()">← Mulai Ulang</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // CONFIG — ubah nomor WA toko Anda di sini
+  const WA_NUMBER = '6281234567890';
+
+  const answers = { step1: null, step2: null };
+  const selections = { step1: null, step2: null };
+
+  // Data rekomendasi
+  const recommendations = {
+    // [lokasi]-[benda]
+    'kantor-padat':    { type: 'APAR Dry Chemical Powder', sub: 'Media: Serbuk Kering ABC', badge: 'Perlindungan Umum Terbaik', reason: 'Media powder efektif memadamkan hampir semua kelas kebakaran (A, B, C). Pilihan paling ekonomis dan serbaguna untuk kantor, ruko, dan ruang dengan beragam material.', warn: null, highlight: 'row-powder' },
+    'kantor-listrik':  { type: 'APAR CO₂ (Carbon Dioxide)', sub: 'Media: Gas CO₂ Bertekanan', badge: 'Aman untuk Elektronik', reason: 'CO₂ bersifat clean agent — tidak meninggalkan residu apapun setelah digunakan, sehingga peralatan elektronik Anda tetap aman dan tidak rusak setelah pemadaman.', warn: null, highlight: 'row-co2' },
+    'kantor-cair':     { type: 'APAR Foam (Busa AFFF)', sub: 'Media: Aqueous Film-Forming Foam', badge: 'Efektif untuk Cairan', reason: 'Busa menyelimuti permukaan cairan terbakar dan memutus pasokan oksigen secara efektif. Sangat direkomendasikan untuk area dengan bahan cair mudah terbakar.', warn: 'Peringatan: JANGAN gunakan APAR Foam pada peralatan listrik aktif — busa bersifat konduktor dan dapat memperparah korsleting!', highlight: 'row-foam' },
+    'kantor-campuran': { type: 'APAR Dry Chemical Powder', sub: 'Media: Serbuk Kering ABC', badge: 'Perlindungan Umum Terbaik', reason: 'Untuk area campuran, Powder ABC adalah solusi paling aman karena mampu menangani kebakaran benda padat, cairan, maupun kelistrikan sekaligus dengan harga terjangkau.', warn: null, highlight: 'row-powder' },
+
+    'server-padat':    { type: 'APAR Clean Agent', sub: 'Media: Gas HFC/FK-5-1-12', badge: 'Tidak Merusak Perangkat', reason: 'Untuk ruang server, Clean Agent adalah standar terbaik. Gas ini memadamkan api tanpa residu dan tidak merusak komponen elektronik sensitif di dalamnya.', warn: null, highlight: 'row-clean' },
+    'server-listrik':  { type: 'APAR CO₂ (Carbon Dioxide)', sub: 'Media: Gas CO₂ Bertekanan', badge: 'Standar Ruang Server', reason: 'CO₂ adalah pilihan klasik untuk ruang server dan data center. Tidak meninggalkan residu, tidak merusak hardware, dan bekerja efektif memadamkan kebakaran listrik.', warn: null, highlight: 'row-co2' },
+    'server-cair':     { type: 'APAR CO₂ (Carbon Dioxide)', sub: 'Media: Gas CO₂ Bertekanan', badge: 'Aman untuk Elektronik', reason: 'Di ruang server, prioritas utama adalah tidak merusak perangkat. CO₂ efektif untuk cairan dan listrik sekaligus, tanpa risiko kerusakan akibat residu.', warn: null, highlight: 'row-co2' },
+    'server-campuran': { type: 'APAR Clean Agent', sub: 'Media: Gas HFC/FK-5-1-12', badge: 'Perlindungan Total Server', reason: 'Clean Agent memberikan perlindungan menyeluruh untuk ruang server — efektif di berbagai kelas kebakaran, ramah lingkungan, dan tidak meninggalkan residu berbahaya.', warn: null, highlight: 'row-clean' },
+
+    'industri-padat':  { type: 'APAR Dry Chemical Powder', sub: 'Media: Serbuk Kering ABC', badge: 'Ideal untuk Gudang', reason: 'Powder ABC sangat efektif untuk kebakaran benda padat seperti kayu, kertas, dan plastik di gudang atau bengkel, dengan kapasitas yang bisa disesuaikan (6–9 kg).', warn: null, highlight: 'row-powder' },
+    'industri-listrik':{ type: 'APAR Dry Chemical Powder', sub: 'Media: Serbuk Kering ABC atau CO₂', badge: 'Fleksibel & Andal', reason: 'Untuk industri dengan peralatan listrik, Powder ABC adalah pilihan utama karena menangani kelas A dan C. Pertimbangkan CO₂ tambahan untuk area mesin sensitif.', warn: null, highlight: 'row-powder' },
+    'industri-cair':   { type: 'APAR Foam (Busa AFFF)', sub: 'Media: Aqueous Film-Forming Foam', badge: 'Efektif Cairan & Padat', reason: 'Foam sangat efektif untuk bengkel dan dapur yang dominan bahan cair — minyak goreng, bensin, atau solar. Foam menyelimuti permukaan api lebih cepat dibanding powder.', warn: 'Peringatan: JANGAN gunakan APAR Foam pada peralatan listrik aktif! Sediakan juga CO₂ atau Powder untuk area berlistrik di dekatnya.', highlight: 'row-foam' },
+    'industri-campuran':{ type: 'APAR Dry Chemical Powder', sub: 'Media: Serbuk Kering ABC', badge: 'Solusi Serbaguna Industri', reason: 'Di area industri campuran, Powder ABC memberikan perlindungan paling menyeluruh. Untuk gudang besar, gunakan ukuran 6–9 kg agar jangkauan pemadaman optimal.', warn: null, highlight: 'row-powder' },
+
+    'spbu-padat':      { type: 'APAR Foam (Busa AFFF)', sub: 'Media: Aqueous Film-Forming Foam', badge: 'Standar Area Bahan Bakar', reason: 'Meskipun ada benda padat, di lingkungan SPBU dan gudang kimia, Foam adalah standar karena ancaman utamanya adalah cairan mudah terbakar.', warn: 'Pastikan juga tersedia APAR Powder sebagai cadangan untuk kebakaran campuran atau benda padat.', highlight: 'row-foam' },
+    'spbu-listrik':    { type: 'APAR Dry Chemical Powder', sub: 'Media: Serbuk Kering ABC', badge: 'Multi-Class Protection', reason: 'Untuk area SPBU dengan instalasi listrik, Powder ABC mampu menangani kebakaran kelas B (bahan bakar) dan C (listrik) sekaligus — perlindungan ganda yang esensial.', warn: null, highlight: 'row-powder' },
+    'spbu-cair':       { type: 'APAR Foam (Busa AFFF)', sub: 'Media: Aqueous Film-Forming Foam', badge: 'Ideal untuk SPBU & Kimia', reason: 'Foam AFFF adalah standar internasional untuk area bahan bakar dan cairan kimia. Lapisan film tipis yang terbentuk mencegah reignition (penyalaan ulang) secara efektif.', warn: 'Peringatan: Jangan gunakan Foam di dekat instalasi listrik aktif! Kombinasikan dengan Powder untuk perlindungan menyeluruh.', highlight: 'row-foam' },
+    'spbu-campuran':   { type: 'APAR Dry Chemical Powder', sub: 'Media: Serbuk Kering ABC', badge: 'Perlindungan Menyeluruh', reason: 'Powder ABC adalah pilihan terbaik untuk area SPBU campuran karena menangani hampir semua skenario kebakaran (A, B, C) dengan biaya yang terjangkau.', warn: null, highlight: 'row-powder' },
+  };
+
+  function select(step, btn) {
+    const panel = document.getElementById(`step${step}`);
+    panel.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    answers[`step${step}`] = btn.dataset.val;
+    selections[`step${step}`] = btn;
+
+    const nextBtn = document.getElementById(`next${step}`);
+    nextBtn.classList.add('enabled');
+  }
+
+  function goStep(step) {
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('visible'));
+    document.getElementById(`step${step}`).classList.add('visible');
+    updateProgress(step);
+  }
+
+  function updateProgress(step) {
+    [1,2].forEach(i => {
+      const dot = document.getElementById(`dot${i}`);
+      const lbl = document.getElementById(`lbl${i}`);
+      dot.classList.remove('active','done');
+      lbl.classList.remove('active','done');
+      if (i < step) { dot.classList.add('done'); lbl.classList.add('done'); dot.textContent = '✓'; }
+      else if (i === step) { dot.classList.add('active'); lbl.classList.add('active'); dot.textContent = i; }
+      else { dot.textContent = i; }
+    });
+    const line1 = document.getElementById('line1');
+    if (step > 1) line1.classList.add('done'); else line1.classList.remove('done');
+  }
+
+  function showResult() {
+    const key = `${answers.step1}-${answers.step2}`;
+    const rec = recommendations[key];
+    if (!rec) return;
+
+    // Fill result
+    document.getElementById('resType').textContent = rec.type;
+    document.getElementById('resTypeSub').textContent = rec.sub;
+    document.getElementById('resBadge').textContent = rec.badge;
+    document.getElementById('resReason').textContent = rec.reason;
+
+    // Warn
+    const warnEl = document.getElementById('resWarn');
+    if (rec.warn) {
+      document.getElementById('resWarnText').textContent = rec.warn;
+      warnEl.classList.add('show');
+    } else {
+      warnEl.classList.remove('show');
+    }
+
+    // Matrix highlight
+    ['row-powder','row-co2','row-foam','row-clean'].forEach(id => {
+      document.getElementById(id).classList.remove('highlight');
+    });
+    if (rec.highlight) document.getElementById(rec.highlight).classList.add('highlight');
+
+    // WA message
+    const loc = selections.step1 ? selections.step1.querySelector('.opt-title').textContent : '';
+    const benda = selections.step2 ? selections.step2.querySelector('.opt-title').textContent : '';
+    const waMsg = `Halo Toga Safety, saya ingin berkonsultasi tentang APAR.\n\nLokasi: ${loc}\nBenda dominan: ${benda}\nRekomendasi sistem: ${rec.type}\n\nMohon bantuannya untuk pemesanan. Terima kasih!`;
+    const waEncoded = encodeURIComponent(waMsg);
+
+    document.getElementById('waText').innerHTML = `"Halo Toga Safety, saya ingin memesan <strong>${rec.type}</strong> untuk area <strong>${loc}</strong> saya. Mohon bantuannya."`;
+    document.getElementById('btnWa').href = `https://wa.me/${WA_NUMBER}?text=${waEncoded}`;
+
+    // Show result, hide steps
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('visible'));
+    document.getElementById('progressBar').style.display = 'none';
+    document.querySelector('.steps-wrap').style.display = 'none';
+    document.getElementById('resultPanel').classList.add('visible');
+
+    // Progress: all done
+    [1,2].forEach(i => {
+      document.getElementById(`dot${i}`).className = 'dot-circle done';
+      document.getElementById(`lbl${i}`).className = 'dot-label done';
+    });
+    document.getElementById('dot3').className = 'dot-circle done';
+    document.getElementById('lbl3').className = 'dot-label done';
+  }
+
+  function resetAll() {
+    answers.step1 = answers.step2 = null;
+    selections.step1 = selections.step2 = null;
+
+    document.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('.btn-next').forEach(b => b.classList.remove('enabled'));
+
+    document.getElementById('resultPanel').classList.remove('visible');
+    document.getElementById('progressBar').style.display = 'flex';
+    document.querySelector('.steps-wrap').style.display = 'block';
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('visible'));
+    document.getElementById('step1').classList.add('visible');
+
+    updateProgress(1);
+    [1,2].forEach(i => { document.getElementById(`dot${i}`).textContent = i; });
+    document.getElementById('dot3').textContent = '✓';
+  }
+</script>
+</body>
+</html>
