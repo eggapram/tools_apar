@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalkulator APAR</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --red: #D72638;
+    --red-dark: #A81C29;
+    --red-light: #FDECEA;
+    --orange: #F4830A;
+    --yellow: #F7C948;
+    --charcoal: #1A1A2E;
+    --gray-1: #F5F5F0;
+    --gray-2: #E8E8E2;
+    --gray-3: #AEAEAD;
+    --gray-4: #6B6B6B;
+    --white: #FEFEFE;
+    --shadow: 0 4px 24px rgba(215,38,56,0.10), 0 1px 4px rgba(0,0,0,0.06);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: var(--gray-1);
+    color: var(--charcoal);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+
+  .widget {
+    width: 100%;
+    max-width: 640px;
+  }
+
+  /* Header */
+  .header {
+    background: var(--red);
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 28px 32px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+  }
+  .header::after {
+    content: '🧯';
+    position: absolute;
+    right: 28px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 52px;
+    opacity: 0.85;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.18));
+  }
+  .header-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.65);
+    margin-bottom: 6px;
+  }
+  .header h1 {
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.2;
+  }
+  .header p {
+    font-size: 12.5px;
+    color: rgba(255,255,255,0.75);
+    margin-top: 6px;
+    max-width: 340px;
+    line-height: 1.5;
+  }
+
+  /* Card body */
+  .card {
+    background: var(--white);
+    border-radius: 0 0 var(--radius) var(--radius);
+    padding: 28px 32px 32px;
+    box-shadow: var(--shadow);
+  }
+
+  /* Step sections */
+  .section {
+    margin-bottom: 22px;
+  }
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--gray-3);
+    margin-bottom: 10px;
+  }
+
+  /* Risk selector */
+  .risk-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .risk-btn {
+    border: 2px solid var(--gray-2);
+    border-radius: var(--radius-sm);
+    padding: 12px 8px;
+    background: var(--white);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    text-align: center;
+    position: relative;
+  }
+  .risk-btn:hover { border-color: var(--red); background: var(--red-light); }
+  .risk-btn.active {
+    border-color: var(--red);
+    background: var(--red-light);
+    box-shadow: 0 0 0 3px rgba(215,38,56,0.12);
+  }
+  .risk-btn .risk-icon { font-size: 22px; margin-bottom: 5px; display: block; }
+  .risk-btn .risk-name {
+    font-size: 12px; font-weight: 700; color: var(--charcoal); display: block;
+  }
+  .risk-btn .risk-desc {
+    font-size: 10px; color: var(--gray-4); margin-top: 3px; line-height: 1.35; display: block;
+  }
+  .risk-btn.active .risk-name { color: var(--red-dark); }
+  .risk-badge {
+    position: absolute; top: -6px; right: -6px;
+    background: var(--red); color: white;
+    font-size: 9px; font-weight: 700;
+    border-radius: 20px; padding: 2px 7px;
+    display: none;
+  }
+  .risk-btn.active .risk-badge { display: block; }
+
+  /* Number inputs */
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .input-group { display: flex; flex-direction: column; gap: 6px; }
+  .input-group label {
+    font-size: 12px; font-weight: 600; color: var(--gray-4);
+  }
+  .input-wrap { position: relative; }
+  .input-wrap input {
+    width: 100%;
+    padding: 11px 48px 11px 14px;
+    border: 2px solid var(--gray-2);
+    border-radius: var(--radius-sm);
+    font-family: 'Space Mono', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--charcoal);
+    background: var(--gray-1);
+    outline: none;
+    transition: border-color 0.15s;
+    -moz-appearance: textfield;
+  }
+  .input-wrap input::-webkit-outer-spin-button,
+  .input-wrap input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .input-wrap input:focus { border-color: var(--red); background: var(--white); }
+  .input-unit {
+    position: absolute; right: 12px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px; font-weight: 600; color: var(--gray-3);
+  }
+
+  /* Floor selector */
+  .floor-row {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .floor-btn {
+    width: 36px; height: 36px;
+    border: 2px solid var(--gray-2);
+    border-radius: 8px;
+    background: var(--white);
+    font-size: 18px; font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--charcoal);
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .floor-btn:hover { border-color: var(--red); color: var(--red); }
+  .floor-display {
+    font-family: 'Space Mono', monospace;
+    font-size: 22px; font-weight: 700;
+    color: var(--charcoal);
+    min-width: 28px; text-align: center;
+  }
+  .floor-label { font-size: 12px; color: var(--gray-4); font-weight: 500; }
+
+  /* Divider */
+  .divider {
+    height: 1px; background: var(--gray-2); margin: 22px 0;
+  }
+
+  /* Results */
+  .result-box {
+    background: linear-gradient(135deg, var(--charcoal) 0%, #2d2d4e 100%);
+    border-radius: var(--radius-sm);
+    padding: 22px 24px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+  .result-box::before {
+    content: '';
+    position: absolute;
+    bottom: -30px; right: -30px;
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: rgba(215,38,56,0.12);
+  }
+  .result-title {
+    font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
+    text-transform: uppercase; color: rgba(255,255,255,0.5);
+    margin-bottom: 14px;
+  }
+  .result-main {
+    display: flex; align-items: flex-end; gap: 20px;
+    flex-wrap: wrap;
+  }
+  .result-item { flex: 1; min-width: 110px; }
+  .result-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 42px; font-weight: 700;
+    color: #fff; line-height: 1;
+    transition: all 0.3s;
+  }
+  .result-num span {
+    font-size: 16px; color: rgba(255,255,255,0.5); font-weight: 400; margin-left: 4px;
+  }
+  .result-sublabel {
+    font-size: 11.5px; color: rgba(255,255,255,0.55); margin-top: 4px;
+  }
+  .result-divider-v {
+    width: 1px; height: 52px; background: rgba(255,255,255,0.12); flex-shrink: 0;
+  }
+  .result-area-label {
+    font-size: 11px; color: rgba(255,255,255,0.45); margin-bottom: 2px;
+  }
+  .result-area-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 18px; font-weight: 700; color: rgba(255,255,255,0.85);
+  }
+
+  /* Weight recommendation */
+  .weight-cards {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    margin-top: 14px;
+  }
+  .weight-card {
+    border-radius: var(--radius-sm);
+    padding: 11px 12px;
+    border: 1.5px solid;
+    opacity: 0.4;
+    transition: opacity 0.3s, box-shadow 0.3s;
+  }
+  .weight-card.recommended { opacity: 1; box-shadow: 0 0 0 3px rgba(215,38,56,0.18); }
+  .weight-card.w1 { border-color: #64B5F6; background: #E3F2FD; }
+  .weight-card.w2 { border-color: var(--orange); background: #FFF3E0; }
+  .weight-card.w3 { border-color: var(--red); background: var(--red-light); }
+  .weight-card .w-size {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px; font-weight: 700; color: var(--charcoal);
+  }
+  .weight-card .w-use { font-size: 10.5px; color: var(--gray-4); margin-top: 3px; line-height: 1.35; }
+  .weight-card .w-rec-badge {
+    font-size: 9px; font-weight: 700; color: var(--red);
+    text-transform: uppercase; letter-spacing: 1px;
+    display: none; margin-top: 5px;
+  }
+  .weight-card.recommended .w-rec-badge { display: block; }
+
+  /* Notes */
+  .note {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: #FFF8E1; border-radius: var(--radius-sm);
+    padding: 12px 14px; margin-top: 14px;
+    border-left: 3px solid var(--yellow);
+  }
+  .note-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .note p { font-size: 11.5px; color: #5a4a00; line-height: 1.55; }
+  .note strong { font-weight: 700; }
+
+  /* Installation tips */
+  .tips-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 14px; }
+  .tip-item {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: var(--gray-1); border-radius: 8px; padding: 10px 12px;
+  }
+  .tip-icon { font-size: 18px; flex-shrink: 0; }
+  .tip-text .tip-title { font-size: 11.5px; font-weight: 700; color: var(--charcoal); }
+  .tip-text .tip-val { font-size: 11px; color: var(--gray-4); margin-top: 2px; line-height: 1.4; }
+
+  /* Legal footer */
+  .legal {
+    margin-top: 18px; text-align: center;
+    font-size: 10.5px; color: var(--gray-3); line-height: 1.5;
+  }
+  .legal a { color: var(--red); text-decoration: none; }
+
+  @media (max-width: 480px) {
+    .card { padding: 20px 18px 24px; }
+    .header { padding: 22px 20px 18px; }
+    .header::after { font-size: 38px; right: 16px; }
+    .risk-grid { gap: 7px; }
+    .risk-btn { padding: 10px 6px; }
+    .risk-btn .risk-icon { font-size: 18px; }
+    .input-row { grid-template-columns: 1fr; gap: 10px; }
+    .weight-cards { grid-template-columns: 1fr; }
+    .tips-grid { grid-template-columns: 1fr; }
+    .result-num { font-size: 34px; }
+    .result-divider-v { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="widget">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-label">Permenakertrans 04/1980</div>
+    <h1>Kalkulator Jumlah APAR</h1>
+    <p>Hitung kebutuhan Alat Pemadam Api Ringan sesuai regulasi resmi Indonesia.</p>
+  </div>
+
+  <!-- Card -->
+  <div class="card">
+
+    <!-- Step 1: Risk -->
+    <div class="section">
+      <div class="section-label">1. Tingkat Risiko Kebakaran</div>
+      <div class="risk-grid">
+        <button class="risk-btn active" data-risk="rendah" onclick="setRisk(this)">
+          <span class="risk-badge">✓</span>
+          <span class="risk-icon">🏢</span>
+          <span class="risk-name">Rendah</span>
+          <span class="risk-desc">Kantor, sekolah, hotel, perumahan</span>
+        </button>
+        <button class="risk-btn" data-risk="sedang" onclick="setRisk(this)">
+          <span class="risk-badge">✓</span>
+          <span class="risk-icon">🏭</span>
+          <span class="risk-name">Sedang</span>
+          <span class="risk-desc">Toko, bengkel, gudang non-kimia</span>
+        </button>
+        <button class="risk-btn" data-risk="tinggi" onclick="setRisk(this)">
+          <span class="risk-badge">✓</span>
+          <span class="risk-icon">⚗️</span>
+          <span class="risk-name">Tinggi</span>
+          <span class="risk-desc">Gudang kimia, pabrik, SPBU</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2: Dimensions -->
+    <div class="section">
+      <div class="section-label">2. Dimensi Bangunan (per Lantai)</div>
+      <div class="input-row">
+        <div class="input-group">
+          <label>Panjang</label>
+          <div class="input-wrap">
+            <input type="number" id="panjang" value="20" min="1" max="9999" oninput="calculate()">
+            <span class="input-unit">m</span>
+          </div>
+        </div>
+        <div class="input-group">
+          <label>Lebar</label>
+          <div class="input-wrap">
+            <input type="number" id="lebar" value="15" min="1" max="9999" oninput="calculate()">
+            <span class="input-unit">m</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Floors -->
+    <div class="section">
+      <div class="section-label">3. Jumlah Lantai</div>
+      <div class="floor-row">
+        <button class="floor-btn" onclick="changeFloor(-1)">−</button>
+        <div class="floor-display" id="floorDisplay">1</div>
+        <button class="floor-btn" onclick="changeFloor(1)">+</button>
+        <span class="floor-label">Lantai</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Results -->
+    <div class="section-label">Hasil Perhitungan</div>
+
+    <div class="result-box">
+      <div class="result-title">Kebutuhan APAR Minimum</div>
+      <div class="result-main">
+        <div class="result-item">
+          <div class="result-num" id="resTotal">2<span>unit</span></div>
+          <div class="result-sublabel" id="resDesc">Total semua lantai</div>
+        </div>
+        <div class="result-divider-v"></div>
+        <div>
+          <div class="result-area-label">Luas per lantai</div>
+          <div class="result-area-val" id="resArea">300 m²</div>
+          <div class="result-area-label" style="margin-top:8px">Per lantai</div>
+          <div class="result-area-val" id="resPerFloor">2 unit</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Weight recommendation -->
+    <div class="section-label" style="margin-top:18px">Rekomendasi Berat APAR</div>
+    <div class="weight-cards">
+      <div class="weight-card w1" id="w1">
+        <div class="w-size">1 – 2 kg</div>
+        <div class="w-use">Kendaraan, ruang panel kecil, server minimalis</div>
+        <div class="w-rec-badge">★ Direkomendasikan</div>
+      </div>
+      <div class="weight-card w2 recommended" id="w2">
+        <div class="w-size">3 – 4,5 kg</div>
+        <div class="w-use">Ruko, kantor, koridor apartemen</div>
+        <div class="w-rec-badge">★ Direkomendasikan</div>
+      </div>
+      <div class="weight-card w3" id="w3">
+        <div class="w-size">6 – 9 kg</div>
+        <div class="w-use">Gudang, pabrik, SPBU, koridor gedung besar</div>
+        <div class="w-rec-badge">★ Direkomendasikan</div>
+      </div>
+    </div>
+
+    <!-- Note -->
+    <div class="note" id="distanceNote" style="display:none">
+      <span class="note-icon">⚠️</span>
+      <p id="distanceNoteText"></p>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Installation tips -->
+    <div class="section-label">Syarat Pemasangan</div>
+    <div class="tips-grid">
+      <div class="tip-item">
+        <span class="tip-icon">📏</span>
+        <div class="tip-text">
+          <div class="tip-title">Tinggi Pemasangan</div>
+          <div class="tip-val">Puncak tabung 125 cm dari lantai, bagian bawah ≥ 15 cm</div>
+        </div>
+      </div>
+      <div class="tip-item">
+        <span class="tip-icon">📐</span>
+        <div class="tip-text">
+          <div class="tip-title">Jarak Antar APAR</div>
+          <div class="tip-val">Maksimal 15 meter antar unit (Pasal 4)</div>
+        </div>
+      </div>
+      <div class="tip-item">
+        <span class="tip-icon">🔺</span>
+        <div class="tip-text">
+          <div class="tip-title">Tanda Penunjuk</div>
+          <div class="tip-val">Segitiga merah, sisi 35 cm, terpasang di atas tabung</div>
+        </div>
+      </div>
+      <div class="tip-item">
+        <span class="tip-icon">🚶</span>
+        <div class="tip-text">
+          <div class="tip-title">Penempatan</div>
+          <div class="tip-val">Jalur evakuasi utama, tidak terhalang barang atau sekat</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Legal -->
+    <div class="legal">
+      Berdasarkan <strong>Permenakertrans No. PER.04/MEN/1980</strong> • Hasil ini bersifat estimasi.<br>
+      Konsultasikan dengan tenaga ahli K3 untuk kepastian hukum.
+    </div>
+  </div>
+</div>
+
+<script>
+  const riskConfig = {
+    rendah: { coverage: 150, label: 'Risiko Rendah', weightRec: 'w2' },
+    sedang: { coverage: 100, label: 'Risiko Sedang', weightRec: 'w2' },
+    tinggi: { coverage: 50,  label: 'Risiko Tinggi', weightRec: 'w3' },
+  };
+
+  let currentRisk = 'rendah';
+  let floors = 1;
+
+  function setRisk(btn) {
+    document.querySelectorAll('.risk-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentRisk = btn.dataset.risk;
+    calculate();
+  }
+
+  function changeFloor(delta) {
+    floors = Math.max(1, Math.min(floors + delta, 99));
+    document.getElementById('floorDisplay').textContent = floors;
+    calculate();
+  }
+
+  function calculate() {
+    const p = parseFloat(document.getElementById('panjang').value) || 0;
+    const l = parseFloat(document.getElementById('lebar').value) || 0;
+    const cfg = riskConfig[currentRisk];
+    const area = p * l;
+    const perFloor = area > 0 ? Math.ceil(area / cfg.coverage) : 0;
+
+    // Distance rule: if length or width > 30m (2× the 15m max), might need extra
+    let extraByDistance = 0;
+    if (p > 30 || l > 30) {
+      const byP = p > 0 ? Math.ceil(p / 15) : 0;
+      const byL = l > 0 ? Math.ceil(l / 15) : 0;
+      extraByDistance = Math.max(byP, byL);
+    }
+    const perFloorFinal = Math.max(perFloor, extraByDistance, area > 0 ? 1 : 0);
+    const total = perFloorFinal * floors;
+
+    document.getElementById('resTotal').innerHTML = `${total}<span>unit</span>`;
+    document.getElementById('resDesc').textContent = floors > 1 ? `${floors} lantai × ${perFloorFinal} unit/lantai` : 'Total kebutuhan';
+    document.getElementById('resArea').textContent = area > 0 ? `${area.toLocaleString('id')} m²` : '— m²';
+    document.getElementById('resPerFloor').textContent = area > 0 ? `${perFloorFinal} unit` : '—';
+
+    // Distance note
+    const noteEl = document.getElementById('distanceNote');
+    const noteTxt = document.getElementById('distanceNoteText');
+    if (extraByDistance > perFloor && area > 0) {
+      noteEl.style.display = 'flex';
+      noteTxt.innerHTML = `<strong>Perhatian jarak!</strong> Meski secara luas cukup ${perFloor} unit, dimensi bangunan Anda melebihi jangkauan 15 m, sehingga dibutuhkan minimal <strong>${perFloorFinal} unit/lantai</strong> agar aturan jarak Pasal 4 terpenuhi.`;
+    } else {
+      noteEl.style.display = 'none';
+    }
+
+    // Weight recommendation
+    ['w1','w2','w3'].forEach(id => document.getElementById(id).classList.remove('recommended'));
+    document.getElementById(cfg.weightRec).classList.add('recommended');
+  }
+
+  // Init
+  calculate();
+</script>
+</body>
+</html>
